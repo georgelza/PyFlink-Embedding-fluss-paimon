@@ -15,8 +15,6 @@ configs:
   postgres_hba:
     file: conf/pg/pg_hba.conf
 
-  # fluss-conf:
-  #   file: conf/fluss/server.yaml
 
 services:
   ################################################################################
@@ -148,10 +146,10 @@ services:
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                    : file:///paimon
+          datalake.paimon.warehouse                     : file:///paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                    : filesystem
+          datalake.paimon.metastore                     : filesystem
 
     # configs:
     #   - source: fluss-conf
@@ -197,10 +195,10 @@ services:
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                    : file:///paimon
+          datalake.paimon.warehouse                     : file:///paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                    : filesystem
+          datalake.paimon.metastore                     : filesystem
 
     volumes:
       - ./data/fluss/ts1/local-data:/fluss/local-data
@@ -241,10 +239,10 @@ services:
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : iceberg
-          datalake.paimon.warehouse                    : file:///paimon
+          datalake.paimon.warehouse                     : file:///paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                    : filesystem
+          datalake.paimon.metastore                     : filesystem
 
     volumes:
       - ./data/fluss/ts2/local-data:/fluss/local-data
@@ -285,10 +283,10 @@ services:
           # Lakehouse store and catalog both on FS
           datalake.enabled                                : true
           datalake.format                                 : paimon
-          datalake.paimon.warehouse                      : file:///paimon
+          datalake.paimon.warehouse                       : file:///paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                      : filesystem
+          datalake.paimon.metastore                       : filesystem
 
   # JDBC Catalog
   # datalake.paimon.metastore                     : jdbc
