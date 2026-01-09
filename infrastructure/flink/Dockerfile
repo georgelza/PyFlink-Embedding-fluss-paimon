@@ -68,12 +68,11 @@ COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_
 COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
 
 # PROBLEM At the moment.
-# COPY stage/hive-iceberg-catalog-4.2.0.jar                               ${FLINK_HOME}/lib/
 # COPY stage/fluss-lake-iceberg-${FLUSS}-incubating.jar                   ${FLINK_HOME}/lib/
-
-COPY stage/iceberg-aws-bundle-1.9.1.jar                                 ${FLINK_HOME}/lib/
-COPY stage/iceberg-aws-1.9.1.jar                                        ${FLINK_HOME}/lib/
-COPY stage/failsafe-3.3.2.jar                                           ${FLINK_HOME}/lib/
+# COPY stage/hive-iceberg-catalog-4.2.0.jar                               ${FLINK_HOME}/lib/
+# COPY stage/iceberg-aws-bundle-1.9.1.jar                                 ${FLINK_HOME}/lib/
+# COPY stage/iceberg-aws-1.9.1.jar                                        ${FLINK_HOME}/lib/
+# COPY stage/failsafe-3.3.2.jar                                           ${FLINK_HOME}/lib/
 
 
 
