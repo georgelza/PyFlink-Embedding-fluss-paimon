@@ -127,35 +127,35 @@ GRANT ALL PRIVILEGES ON DATABASE catalogs TO dbadmin;
 
 
 -------------------------------------------------------------------------------------------
--- Apache Flink / Paimon JDBC Catalog Datastore
+-- Apache Paimon JDBC Catalog Datastore
 
 -- Schema that will house our Flink / Paimon JDBC catalogs
-CREATE SCHEMA IF NOT EXISTS paimon AUTHORIZATION dbadmin;
+CREATE SCHEMA IF NOT EXISTS paimon_jdbc AUTHORIZATION dbadmin;
 
 -- Grant permissions to the catalog user
-GRANT ALL PRIVILEGES ON SCHEMA paimon TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA paimon TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA paimon TO dbadmin;
+GRANT ALL PRIVILEGES ON SCHEMA paimon_jdbc TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA paimon_jdbc TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA paimon_jdbc TO dbadmin;
 
 -- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA paimon GRANT ALL ON TABLES TO dbadmin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA paimon GRANT ALL ON SEQUENCES TO dbadmin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA paimon_jdbc GRANT ALL ON TABLES TO dbadmin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA paimon_jdbc GRANT ALL ON SEQUENCES TO dbadmin;
 
-COMMENT ON SCHEMA paimon IS 'Flink / Paimon JDBC Catalog Storage';
+COMMENT ON SCHEMA paimon_jdbc IS 'Paimon JDBC Catalog Storage';
 
 -------------------------------------------------------------------------------------------
--- Apache Fluss /Paimon JDBC Catalog Datastore
+-- Apache Fluss JDBC Catalog Datastore
 
--- Schema that will house our Flink / Fluss JDBC catalogs
-CREATE SCHEMA IF NOT EXISTS fluss AUTHORIZATION dbadmin;
+-- Schema that will house our Fluss JDBC catalogs
+CREATE SCHEMA IF NOT EXISTS iceberg_jdbc AUTHORIZATION dbadmin;
 
 -- Grant permissions to the catalog user
-GRANT ALL PRIVILEGES ON SCHEMA fluss TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA fluss TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA fluss TO dbadmin;
+GRANT ALL PRIVILEGES ON SCHEMA iceberg_jdbc TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA iceberg_jdbc TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA iceberg_jdbc TO dbadmin;
 
 -- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA fluss GRANT ALL ON TABLES TO dbadmin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA fluss GRANT ALL ON SEQUENCES TO dbadmin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA iceberg_jdbc GRANT ALL ON TABLES TO dbadmin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA iceberg_jdbc GRANT ALL ON SEQUENCES TO dbadmin;
 
-COMMENT ON SCHEMA fluss IS 'Flink / Fluss JDBC Catalog Storage';
+COMMENT ON SCHEMA iceberg_jdbc IS 'Iceberg JDBC Catalog Storage';

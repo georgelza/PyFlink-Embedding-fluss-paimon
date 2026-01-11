@@ -15,6 +15,7 @@ ENV LANCE_VERSION=0.0.1
 ENV POSTGRESQL_CONNECTOR=42.7.6
 ENV FLINK_CDC=3.5.0
 ENV FLUSS=0.8.0
+ENV HADOOP_VERSION=3.3.4
 
 # 5. Directory Structure 
 RUN mkdir -p /opt/flink/conf/ && \
@@ -49,34 +50,30 @@ COPY stage/woodstox-core-5.3.0.jar                                      ${FLINK_
 COPY stage/aws-java-sdk-bundle-1.12.262.jar                             ${FLINK_HOME}/lib/
 
 # 10.
-RUN echo "-> Install JARs: Dependencies for Paimon"
-COPY stage/paimon-s3-${PAIMON_VERSION}.jar                              ${FLINK_HOME}/lib/
-COPY stage/paimon-flink-${FLINK_VERSION_SHORT}-${PAIMON_VERSION}.jar    ${FLINK_HOME}/lib/
-
+RUN echo "-> Install JARs: Dependencies for Fluss"
+COPY stage/fluss-flink-${FLINK_VERSION_SHORT}-${FLUSS}-incubating.jar   ${FLINK_HOME}/lib/
+COPY stage/fluss-flink-tiering-${FLUSS}-incubating.jar                  ${FLINK_HOME}/lib/
+COPY stage/fluss-fs-s3-${FLUSS}-incubating.jar                          ${FLINK_HOME}/lib/
+# Lakehouse options Libraries
+COPY stage/fluss-lake-iceberg-${FLUSS}-incubating.jar                   ${FLINK_HOME}/lib/
+COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
+#COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
 
 # 11.
-RUN echo "-> Install JARs: Dependencies for Fluss"
-# Flink/Fluss Connector
-COPY stage/fluss-flink-${FLINK_VERSION_SHORT}-${FLUSS}-incubating.jar   ${FLINK_HOME}/lib/
-# Tiering Engine
-COPY stage/fluss-flink-tiering-${FLUSS}-incubating.jar                  ${FLINK_HOME}/lib/
-# Storage tier
-COPY stage/fluss-fs-s3-${FLUSS}-incubating.jar                          ${FLINK_HOME}/lib/
-# Lakehouse options - Paimon
-COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
-# Lakehouse options - lance
-COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
+RUN echo "-> Install JARs: Dependencies for Paimon"
+COPY stage/paimon-flink-${FLINK_VERSION_SHORT}-${PAIMON_VERSION}.jar            ${FLINK_HOME}/lib/
+COPY stage/paimon-s3-${PAIMON_VERSION}.jar                                      ${FLINK_HOME}/lib/
 
-# PROBLEM At the moment.
-# COPY stage/fluss-lake-iceberg-${FLUSS}-incubating.jar                   ${FLINK_HOME}/lib/
-# COPY stage/hive-iceberg-catalog-4.2.0.jar                               ${FLINK_HOME}/lib/
-# COPY stage/iceberg-aws-bundle-1.9.1.jar                                 ${FLINK_HOME}/lib/
-# COPY stage/iceberg-aws-1.9.1.jar                                        ${FLINK_HOME}/lib/
-# COPY stage/failsafe-3.3.2.jar                                           ${FLINK_HOME}/lib/
+# 12.
+RUN echo "-> Install JARs: Dependencies for Iceberg"
+COPY stage/iceberg-flink-runtime-${FLINK_VERSION_SHORT}-${ICEBERG_VERSION}.jar  ${FLINK_HOME}/lib/
+COPY stage/iceberg-aws-bundle-${ICEBERG_VERSION}.jar                            ${FLINK_HOME}/lib/
+# -> S3 required
+# COPY stage/iceberg-aws-${ICEBERG_VERSION}.jar                                 ${FLINK_HOME}/lib/
+# COPY stage/failsafe-3.3.2.jar                                                 ${FLINK_HOME}/lib/
 
 
-
-# 12. Hadoop Configuration for S3A (MinIO)
+# 13. Hadoop Configuration for S3A (MinIO)
 RUN echo "--> Create Hadoop Configuration" && \
     cat > ${HIVE_HOME}/core-site.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>

@@ -8,14 +8,14 @@ RUN echo "--> Installing system dependencies" \
     && apt-get install -y $build_deps
 
 # 2. Environment Variables 
+ENV FLINK_HOME=/opt/flink
 ENV PYTHON_HOME=/usr/bin/python3.10
 ENV PATH=$PATH:$PYTHON_HOME
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
-ENV FLINK_HOME=/opt/flink
 ENV FLINK_VERSION_FULL=1.20.2
 
 # FIX: Classpath must include all directories containing your JARs
-ENV HADOOP_CLASSPATH=/opt/flink/lib/*
+ENV HADOOP_CLASSPATH=${FLINK_HOME}/lib/*
 
 WORKDIR ${FLINK_HOME}
 

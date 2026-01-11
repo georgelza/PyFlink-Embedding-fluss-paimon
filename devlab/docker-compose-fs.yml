@@ -127,7 +127,8 @@ services:
   # Begin Fluss cluster
   ################################################################################
   coordinator-server:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
+#    image: apache/fluss:0.8.0-incubating
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
@@ -136,30 +137,33 @@ services:
     environment:
       - |
         FLUSS_PROPERTIES=
-          bind.listeners                                : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
-          advertised.listeners                          : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
-          zookeeper.address                             : zookeeper:2181
-          internal.listener.name                        : INTERNAL
-          data.dir                                      : file:///fluss/local-data
-          remote.data.dir                               : file:///fluss/remote-data
+          bind.listeners                                  : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
+          advertised.listeners                            : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
+          internal.listener.name                          : INTERNAL
+          zookeeper.address                               : zookeeper:2181
+          
+          data.dir                                        : file:///fluss/local-data
+          remote.data.dir                                 : file:///fluss/remote-data
 
-          # Lakehouse store and catalog both on FS
-          datalake.enabled                              : true
-          datalake.format                               : paimon
-          datalake.paimon.warehouse                     : file:///paimon
+          # Lakehouse store on FS and catalog in JDBC
+          datalake.enabled                                : true
+          datalake.format                                 : iceberg
+          datalake.iceberg.warehouse                      : file:///iceberg
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          #     datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.jdbc.user                      : dbadmin
+          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
 
-    # configs:
-    #   - source: fluss-conf
-    #     target: /opt/fluss/conf/server.yaml
     ports:
       - "9123:9123"
     volumes:
       - ./data/fluss/cs/local-data:/fluss/local-data
       - ./data/fluss/cs/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/iceberg:/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -169,7 +173,7 @@ services:
 
   # Fluss Tablet Server 1
   tablet-server-1:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-1
     container_name: tablet-server-1
     depends_on:
@@ -179,31 +183,37 @@ services:
     environment:
       - |
         FLUSS_PROPERTIES=
-          bind.listeners                                : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
-          advertised.listeners                          : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
-          internal.listener.name                        : INTERNAL
-          tablet-server.id                              : 1
-          zookeeper.address                             : zookeeper:2181
-          coordinator.host                              : coordinator-server
-          coordinator.port                              : 9123
-          log.segment.file-size                         : 10MB
-          kv.snapshot.interval                          : 0s
+          bind.listeners                                  : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
+          advertised.listeners                            : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
+          internal.listener.name                          : INTERNAL
+          zookeeper.address                               : zookeeper:2181
+          coordinator.host                                : coordinator-server
+          coordinator.port                                : 9123
 
-          data.dir                                      : file:///fluss/local-data
-          remote.data.dir                               : file:///fluss/remote-data
+          data.dir                                        : file:///fluss/local-data
+          remote.data.dir                                 : file:///fluss/remote-data
 
-          # Lakehouse store and catalog both on FS
-          datalake.enabled                              : true
-          datalake.format                               : paimon
-          datalake.paimon.warehouse                     : file:///paimon
+          # Lakehouse store on FS and catalog in JDBC
+          datalake.enabled                                : true
+          datalake.format                                 : iceberg
+          datalake.iceberg.warehouse                      : file:///iceberg
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          #      datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.jdbc.user                      : dbadmin
+          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
+
+          tablet-server.id                                : 1
+          log.segment.file-size                           : 10MB
+          kv.snapshot.interval                            : 0s
 
     volumes:
       - ./data/fluss/ts1/local-data:/fluss/local-data
       - ./data/fluss/ts1/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/iceberg:/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -213,7 +223,7 @@ services:
 
   # Fluss Tablet Server 2
   tablet-server-2:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-2
     container_name: tablet-server-2
     depends_on:
@@ -223,31 +233,37 @@ services:
     environment:
       - |
         FLUSS_PROPERTIES=
-          bind.listeners                                : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
-          advertised.listeners                          : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
-          internal.listener.name                        : INTERNAL
-          tablet-server.id                              : 2
-          zookeeper.address                             : zookeeper:2181
-          coordinator.host                              : coordinator-server
-          coordinator.port                              : 9123
-          log.segment.file-size                         : 10MB
-          kv.snapshot.interval                          : 0s
+          bind.listeners                                  : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
+          advertised.listeners                            : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
+          internal.listener.name                          : INTERNAL
+          zookeeper.address                               : zookeeper:2181
+          coordinator.host                                : coordinator-server
+          coordinator.port                                : 9123
+ 
+          data.dir                                        : file:///fluss/local-data
+          remote.data.dir                                 : file:///fluss/remote-data
 
-          data.dir                                      : file:///fluss/local-data
-          remote.data.dir                               : file:///fluss/remote-data
+          # Lakehouse store on FS and catalog in JDBC
+          datalake.enabled                                : true
+          datalake.format                                 : iceberg
+          datalake.iceberg.warehouse                      : file:///iceberg
 
-          # Lakehouse store and catalog both on FS
-          datalake.enabled                              : true
-          datalake.format                               : iceberg
-          datalake.paimon.warehouse                     : file:///paimon
+          # JDBC Catalog
+          #      atalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.jdbc.user                      : dbadmin
+          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          tablet-server.id                                : 2
+          log.segment.file-size                           : 10MB
+          kv.snapshot.interval                            : 0s
 
     volumes:
       - ./data/fluss/ts2/local-data:/fluss/local-data
       - ./data/fluss/ts2/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/iceberg:/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -257,7 +273,7 @@ services:
 
   # Fluss Tablet Server 3
   tablet-server-3:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-3
     container_name: tablet-server-3
     depends_on:
@@ -270,48 +286,34 @@ services:
           bind.listeners                                  : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
           advertised.listeners                            : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
           internal.listener.name                          : INTERNAL
-          tablet-server.id                                : 3          
           zookeeper.address                               : zookeeper:2181
           coordinator.host                                : coordinator-server
           coordinator.port                                : 9123
-          log.segment.file-size                           : 10MB
-          kv.snapshot.interval                            : 0s
 
           data.dir                                        : file:///fluss/local-data
           remote.data.dir                                 : file:///fluss/remote-data
 
-          # Lakehouse store and catalog both on FS
+          # Locate Lakehouse storage for selected table format onto local file system          
           datalake.enabled                                : true
-          datalake.format                                 : paimon
-          datalake.paimon.warehouse                       : file:///paimon
+          datalake.format                                 : iceberg
+          datalake.iceberg.warehouse                      : file:///iceberg
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                       : filesystem
+          # JDBC Catalog
+          #      datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.jdbc.user                      : dbadmin
+          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
 
-  # JDBC Catalog
-  # datalake.paimon.metastore                     : jdbc
-  # datalake.paimon.catalog-key                   : jdbc
-  # datalake.paimon.uri                           : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=fluss
-  # datalake.paimon.jdbc.user                     : dbadmin
-  # datalake.paimon.jdbc.password                 : dbpassword
-  # datalake.paimon.jdbc.driver                   : org.postgresql.Driver
-  # datalake.paimon.warehouse                     : file:///paimon
-
-
-  # S3 Storage -> To Be, need to add ts1, ts2, and ts3 to the MC service create, and remove above reference.
-  # remote.data.dir                               : s3://warehouse/ts3/paimon
-  # datalake.paimon.warehouse                     : s3://warehouse/paimon
-  # datalake.paimon.s3.endpoint                   : http://minio:9000
-  # datalake.paimon.s3.access-key                 : mnadmin
-  # datalake.paimon.s3.secret-key                 : mnpassword
-  # datalake.paimon.s3.region                     : af-south-1
-  # datalake.paimon.s3.path.style.access          : true
-  # datalake.paimon.table-default.file.format     : parquet
+          tablet-server.id                                : 3          
+          log.segment.file-size                           : 10MB
+          kv.snapshot.interval                            : 0s
 
     volumes:
       - ./data/fluss/ts3/local-data:/fluss/local-data
       - ./data/fluss/ts3/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/iceberg:/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s

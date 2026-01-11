@@ -92,23 +92,6 @@ run:
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
 .PHONY: run-fs
 
-# File System based
-runx:
-	@echo "🚀 Creating Required volumes..."
-	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc 
-	mkdir -p ./data/fluss
-	mkdir -p ./data/zk/data ./data/zk/datalogs
-
-	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)..."
-	docker compose -f docker-compose-x.yml -p flussvector up -d \
-		jobmanager taskmanager \
- 	 	postgrescdc \
-		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
-		--remove-orphans
-	@echo "✅ Flink & Fluss stack with supporting services started successfully"
-.PHONY: run-fs
-
 stop:
 	docker compose stop
 
@@ -201,7 +184,7 @@ txns_fluss:
 
 
 # https://fluss.apache.org/docs/maintenance/tiered-storage/lakehouse-storage/#enable-lakehouse-storage	
-tier:
+tier_p:
 	@echo "-- Submitting Tiering Job..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
@@ -212,3 +195,15 @@ tier:
 			--datalake.format paimon \
 			--datalake.paimon.warehouse /paimon \
 			--datalake.paimon.metastore filesystem 
+
+tier_i:
+	@echo "-- Submitting Tiering Job..."
+	docker compose exec --interactive --tty jobmanager \
+		/opt/flink/bin/flink run \
+			-Dpipeline.name="My Fluss Tiering Service" \
+			-Dparallelism.default=2 \
+			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
+			--fluss.bootstrap.servers coordinator-server:9123 \
+			--datalake.format iceberg \
+			--datalake.iceberg.type hadoop \
+			--datalake.iceberg.warehouse /paimon
