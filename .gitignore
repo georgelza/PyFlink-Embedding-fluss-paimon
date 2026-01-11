@@ -28,6 +28,7 @@
 old/
 devlab/data/
 infrastructure/flink/stage
+infrastructure/fluss/stage
 shadowtraffic/conf/license.env
 shadowtraffic/data
 devlab/pyflink/__pycache__
