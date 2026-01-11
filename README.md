@@ -1,5 +1,25 @@
 ## Using Pyflink UDF to calculate embedding vectors on inbound tables via Flink CDC
 
+
+Blog Overview / PLAN
+
+Write workable demo's with the required docker-compose and Dockerfiles and all required builds and Flink SQL showing
+
+1. ShadowTraffic -> PostgreSQL  (2 Tables, accountHolder and transactions), at this stage we excluding the Array[Float column] as computed by the included PyFlink embedding UDF.
+2. PostgreSQL -> CDC -> Flink
+3. Flink ->Fluss
+4. Enable Lakehouse
+   1. Fluss -> Iceberg on FS with JDBC catalog
+   2. Fluss -> Iceberg on FS with REST catalog
+   3. Fluss -> Iceberg on MinIO/S3 with JDBC catalog
+   4. Fluss -> Iceberg on MinIO/S3 with REST catalog
+   5. Fluss -> Paimon on FS with JDBC catalog
+   6. Fluss -> Paimon on MinIO/S3 with JDBC catalog
+5. remote data dir to be shown as local for the FS storage options and MinIO/S3 for the S3 options.
+
+
+
+
 So, the original idea, generate data, do embedding using Pyflink, store into a lakehouse, simple.
 
 Well mission accomplished, even if we did changed some of the original outputs, will see ifi can circle back on the next demo/blog... ye, there is another one already drawn out, started.
