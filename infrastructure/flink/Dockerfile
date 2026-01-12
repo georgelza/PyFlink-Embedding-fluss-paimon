@@ -56,21 +56,24 @@ COPY stage/fluss-flink-tiering-${FLUSS}-incubating.jar                  ${FLINK_
 COPY stage/fluss-fs-s3-${FLUSS}-incubating.jar                          ${FLINK_HOME}/lib/
 # Lakehouse options Libraries
 COPY stage/fluss-lake-iceberg-${FLUSS}-incubating.jar                   ${FLINK_HOME}/lib/
-COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
-#COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
+COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
+
+#COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
+# Special from Yuxia Luo
+COPY stage/fluss-lake-paimon-0.8-SNAPSHOT.jar                           ${FLINK_HOME}/lib/
 
 # 11.
-RUN echo "-> Install JARs: Dependencies for Paimon"
+RUN echo "-> Install JARs: Dependencies for Paimon, included is S3 dependencies"
 COPY stage/paimon-flink-${FLINK_VERSION_SHORT}-${PAIMON_VERSION}.jar            ${FLINK_HOME}/lib/
 COPY stage/paimon-s3-${PAIMON_VERSION}.jar                                      ${FLINK_HOME}/lib/
 
 # 12.
-RUN echo "-> Install JARs: Dependencies for Iceberg"
+RUN echo "-> Install JARs: Dependencies for Iceberg, included is S3 dependencie"
 COPY stage/iceberg-flink-runtime-${FLINK_VERSION_SHORT}-${ICEBERG_VERSION}.jar  ${FLINK_HOME}/lib/
 COPY stage/iceberg-aws-bundle-${ICEBERG_VERSION}.jar                            ${FLINK_HOME}/lib/
 # -> S3 required
-# COPY stage/iceberg-aws-${ICEBERG_VERSION}.jar                                 ${FLINK_HOME}/lib/
-# COPY stage/failsafe-3.3.2.jar                                                 ${FLINK_HOME}/lib/
+COPY stage/iceberg-aws-${ICEBERG_VERSION}.jar                                   ${FLINK_HOME}/lib/
+COPY stage/failsafe-3.3.2.jar                                                   ${FLINK_HOME}/lib/
 
 
 # 13. Hadoop Configuration for S3A (MinIO)

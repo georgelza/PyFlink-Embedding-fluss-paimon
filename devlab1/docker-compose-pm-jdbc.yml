@@ -1,0 +1,329 @@
+
+configs:
+  flink-conf:
+    file: conf/flink/config.yaml
+
+  log4j:
+    file: conf/log4j/log4j.properties
+  log4j-console:
+    file: conf/log4j/log4j-console.properties
+  log4j-session:
+    file: conf/log4j/log4j-session.properties
+
+  postgres_conf:
+    file: conf/pg/postgresql.conf
+  postgres_hba:
+    file: conf/pg/pg_hba.conf
+
+services:
+  ################################################################################
+  # begin Flink cluster
+  #
+  # Lots of Jar's added to the base image, Fluss, JDBC, PostgreSQL, Paimon, S3
+  ################################################################################
+  jobmanager:
+    image: ${REPO_NAME}/apacheflink-1.20.2-scala_2.12-java17:1.0.4
+    hostname: jobmanager
+    container_name: jobmanager
+    ports:
+      - 8084:8081
+    environment:
+      - ENV_ROOTLOG_LEVEL=DEBUG
+      - ENV_FLINKLOG_LEVEL=INFO
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_DEFAULT_REGION=${AWS_REGION}
+
+    volumes:
+      - ./creFlinkFlows:/creFlinkFlows
+      - ./pyflink:/pyflink
+
+      - ./data/flink/paimon:/paimon
+      
+      - ./data/flink/logs:/opt/flink/log
+      - ./data/flink/checkpoints:/opt/flink/checkpoints
+      - ./data/flink/rocksdb:/opt/flink/rocksdb
+    configs:
+      - source: flink-conf
+        target: /opt/flink/conf/config.yaml
+      - source: log4j
+        target: /opt/flink/conf/log4j.properties
+      - source: log4j-console
+        target: /opt/flink/conf/log4j-console.properties
+      - source: log4j-session
+        target: /opt/flink/conf/log4j-session.properties
+    command: jobmanager
+
+  taskmanager:
+    image: ${REPO_NAME}/apacheflink-1.20.2-scala_2.12-java17:1.0.4
+    depends_on:
+      - jobmanager
+    deploy:
+      replicas: 1
+      resources:
+          limits:
+            memory: 12G  # Ensure this is higher than taskmanager.memory.process.size
+                         # Also make sure this aligns with the config file value specified for the taskmanager => memory.process.size: 12gb 
+    environment:
+      - ENV_ROOTLOG_LEVEL=INFO
+      - ENV_FLINKLOG_LEVEL=INFO
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_DEFAULT_REGION=${AWS_REGION}
+
+    volumes:
+      - ./creFlinkFlows:/creFlinkFlows
+      - ./pyflink:/pyflink
+
+      - ./data/flink/paimon:/paimon
+
+      - ./data/flink/logs:/opt/flink/log
+      - ./data/flink/checkpoints:/opt/flink/checkpoints
+      - ./data/flink/rocksdb:/opt/flink/rocksdb
+    configs:
+      - source: flink-conf
+        target: /opt/flink/conf/config.yaml
+      - source: log4j
+        target: /opt/flink/conf/log4j.properties
+      - source: log4j-console
+        target: /opt/flink/conf/log4j-console.properties
+      - source: log4j-session
+        target: /opt/flink/conf/log4j-session.properties
+    command: taskmanager
+
+  ################################################################################
+  # Will act as a destination store from where we will CDC our data to be embedded
+  ################################################################################
+  postgrescdc:
+    image: postgres:15
+    hostname: ${POSTGRES_CDC_HOST}
+    container_name: ${POSTGRES_CDC_HOST}
+    restart: unless-stopped
+    ports:
+      - ${POSTGRES_CDC_PORT}:5432
+    environment:
+      - POSTGRES_DB=${POSTGRES_CDC_DB}
+      - POSTGRES_USER=${POSTGRES_CDC_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5    
+    volumes:
+      - ./data/postgrescdc:/var/lib/postgresql/data
+      - ./sql/postgrescdc:/docker-entrypoint-initdb.d
+    configs:
+      - source: postgres_conf
+        target: /etc/postgresql/postgresql.conf
+      - source: postgres_hba
+        target: /etc/postgresql/data/pg_hba.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf
+
+  ################################################################################
+  # Begin Fluss cluster
+  ################################################################################
+  coordinator-server:
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
+    hostname: coordinator-server
+    container_name: coordinator-server
+    depends_on:
+      - postgrescdc
+      - zookeeper
+    environment:
+      - |
+        FLUSS_PROPERTIES=
+          bind.listeners                                : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
+          advertised.listeners                          : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
+          zookeeper.address                             : zookeeper:2181
+          internal.listener.name                        : INTERNAL
+
+          # Lakehouse store and catalog both on FS
+          datalake.enabled                              : true
+          datalake.format                               : paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
+
+          # FS Based Catalogs
+          datalake.paimon.metastore                     : filesystem
+
+    ports:
+      - "9123:9123"
+    volumes:
+      # NOTE: these directories inside the containers (coordinator and tablet-servers-*) cannot be specified i.e.
+      # /fluss/local-data or
+      # /fluss/remote_data or
+      # /paimon or /iceberg, 
+      # they all need to be configured under /tmp. 
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5  
+    command: ["bin/coordinator-server.sh", "start-foreground"]
+
+  # Fluss Tablet Server 1
+  tablet-server-1:
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
+    hostname: tablet-server-1
+    container_name: tablet-server-1
+    depends_on:
+      - coordinator-server
+    ports:
+      - "9124:9124"
+    environment:
+      - |
+        FLUSS_PROPERTIES=
+          bind.listeners                                : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
+          advertised.listeners                          : INTERNAL://tablet-server-1:9124, CLIENT://tablet-server-1:9123
+          internal.listener.name                        : INTERNAL
+          tablet-server.id                              : 1
+          zookeeper.address                             : zookeeper:2181
+          coordinator.host                              : coordinator-server
+          coordinator.port                              : 9123
+          log.segment.file-size                         : 10MB
+          kv.snapshot.interval                          : 0s
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
+
+          # Lakehouse store and catalog both on FS
+          datalake.enabled                              : true
+          datalake.format                               : paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
+
+          # FS Based Catalogs
+          datalake.paimon.metastore                     : filesystem
+
+    volumes:
+      - ./data/fluss/ts1/local-data:/tmp/local-data
+      - ./data/fluss/ts1/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    command: ["bin/tablet-server.sh", "start-foreground"]
+
+  # Fluss Tablet Server 2
+  tablet-server-2:
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
+    hostname: tablet-server-2
+    container_name: tablet-server-2
+    depends_on:
+      - coordinator-server
+    ports:
+      - "9125:9124"
+    environment:
+      - |
+        FLUSS_PROPERTIES=
+          bind.listeners                                : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
+          advertised.listeners                          : INTERNAL://tablet-server-2:9124, CLIENT://tablet-server-2:9123
+          internal.listener.name                        : INTERNAL
+          tablet-server.id                              : 2
+          zookeeper.address                             : zookeeper:2181
+          coordinator.host                              : coordinator-server
+          coordinator.port                              : 9123
+          log.segment.file-size                         : 10MB
+          kv.snapshot.interval                          : 0s
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
+
+          # Lakehouse store and catalog both on FS
+          datalake.enabled                              : true
+          datalake.format                               : paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
+
+          # FS Based Catalogs
+          datalake.paimon.metastore                     : filesystem
+
+    volumes:
+      - ./data/fluss/ts2/local-data:/tmp/local-data
+      - ./data/fluss/ts2/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    command: ["bin/tablet-server.sh", "start-foreground"]
+
+  # Fluss Tablet Server 3
+  tablet-server-3:
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
+    hostname: tablet-server-3
+    container_name: tablet-server-3
+    depends_on:
+      - coordinator-server
+    ports:
+      - "9126:9124"
+    environment:
+      - |
+        FLUSS_PROPERTIES=
+          bind.listeners                                  : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          advertised.listeners                            : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          internal.listener.name                          : INTERNAL
+          tablet-server.id                                : 3          
+          zookeeper.address                               : zookeeper:2181
+          coordinator.host                                : coordinator-server
+          coordinator.port                                : 9123
+          log.segment.file-size                           : 10MB
+          kv.snapshot.interval                            : 0s
+
+          data.dir                                        : /tmp/local-data
+          remote.data.dir                                 : /tmp/remote-data
+
+          # Lakehouse store and catalog both on FS
+          datalake.enabled                                : true
+          datalake.format                                 : paimon
+          datalake.paimon.warehouse                       : /tmp/paimon
+
+          # FS Based Catalogs
+          datalake.paimon.metastore                       : filesystem
+
+    volumes:
+      - ./data/fluss/ts3/local-data:/tmp/local-data
+      - ./data/fluss/ts3/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    command: ["bin/tablet-server.sh", "start-foreground"]
+
+  # ZooKeeper for Fluss coordination
+  zookeeper:
+    image: zookeeper:3.9.2
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+    volumes:
+      - ./data/zk/data:/data
+      - ./data/zk/datalog:/datalog
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+################################################################################
+# Without a network explicitly defined, you hit this Hive/Thrift error
+# java.net.URISyntaxException Illegal character in hostname
+# https://github.com/TrivadisPF/platys-modern-data-platform/issues/231
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME}
