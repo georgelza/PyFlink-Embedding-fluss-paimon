@@ -15,14 +15,14 @@ Available commands:
 
 - deploy:		Deploy all structures
 
-- ahs_paimon	Deploy insert statement for accountHolder data feed into Paimon datastore
-- txns_paimon	Deploy insert statement for transaction data feed into Paimon datastore
+- ahs_paimon	Deploy insert statement for accountHolder data feed directly into Paimon datastore
+- txns_paimon	Deploy insert statement for transaction data feed directly into Paimon datastore
 
 - ahs_fluss		Deploy insert statement for accountHolder data feed into Fluss datastore
 - txns_fluss	Deploy insert statement for transaction data feed into Fluss datastore
 
-- tier_p		Kick off Fluss Tiering Job - Paimon
-- tier_i		Kick off Fluss Tiering Job - Iceberg
+- tier_p		Kick off Fluss Tiering Job - Paimon on FS
+- tier_i		Kick off Fluss Tiering Job - Iceberg on FS
 
 - stop:  		Stop the project
 - start: 		Restart a stopped project
