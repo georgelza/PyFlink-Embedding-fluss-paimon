@@ -145,8 +145,15 @@ services:
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
 
     ports:
       - "9123:9123"
@@ -157,7 +164,6 @@ services:
       # /paimon or /iceberg, 
       # they all need to be configured under /tmp. 
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -195,14 +201,21 @@ services:
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
+
 
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -240,14 +253,21 @@ services:
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
+
 
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -285,14 +305,21 @@ services:
           datalake.format                                 : paimon
           datalake.paimon.warehouse                       : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                       : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
+
 
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
