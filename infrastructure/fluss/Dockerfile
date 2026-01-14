@@ -17,8 +17,8 @@ COPY stage/paimon-common-1.3.1.jar          ${FLUSS_HOME}/plugins/paimon
 # See Option 2, https://fluss.apache.org/docs/next/streaming-lakehouse/integrate-data-lakes/iceberg/#2-custom-catalog-implementations
 # Required for Iceberg: https://fluss.apache.org/docs/next/streaming-lakehouse/integrate-data-lakes/iceberg/#configure-iceberg-in-cluster-configurations
 
-# RUN mkdir -p /opt/fluss/plugins/iceberg
-# COPY stage/iceberg-core-1.9.1.jar           ${FLUSS_HOME}/plugins/iceberg
-# COPY stage/hadoop-apache-3.3.5-2.jar        ${FLUSS_HOME}/plugins/iceberg
+RUN mkdir -p /opt/fluss/plugins/iceberg
+COPY stage/iceberg-core-1.9.1.jar           ${FLUSS_HOME}/plugins/iceberg
+COPY stage/hadoop-apache-3.3.5-2.jar        ${FLUSS_HOME}/plugins/iceberg
 
 RUN chown -R fluss:fluss ${FLUSS_HOME}
