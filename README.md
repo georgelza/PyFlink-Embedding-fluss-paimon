@@ -38,7 +38,7 @@ Next up, we need to do the embedding calculation, this is done using two Pyflink
 These are called as per below, as inline function calls, returning the embedding vector that is inserted into our lakehouse, based on Apache Paimon.
 
 ```sql
-Insert into c_paimon.finflow.<target table>
+Insert into fluss_catalog.finflow.<target table>
 select (
         fields
     , ...

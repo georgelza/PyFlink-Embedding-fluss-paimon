@@ -27,12 +27,12 @@
 # Folders
 devlab0/data/
 devlab1/data/
+
 devlab0/pyflink/__pycache__
 devlab1/pyflink/__pycache__
 
-infrastructure/flink/stage/
-
-infrastructure/fluss/stage/
+infrastructure/flink/stage
+infrastructure/fluss/stage
 
 shadowtraffic/conf/license.env
 shadowtraffic/data
