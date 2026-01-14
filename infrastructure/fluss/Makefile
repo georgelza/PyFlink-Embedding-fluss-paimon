@@ -28,11 +28,19 @@ build:
 
 
 # Required for Iceberg and JDBC catalog.
-pull: 
-	cd stage; wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.6/postgresql-42.7.6.jar \
+pull: iceberg paimon
+	cd stage; wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.6/postgresql-42.7.6.jar
+
+iceberg:
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-core/1.9.1/iceberg-core-1.9.1.jar \
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-common/1.9.1/iceberg-common-1.9.1.jar \
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.9.1/iceberg-aws-bundle-1.9.1.jar 
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-api/1.9.1/iceberg-api-1.9.1.jar \
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-bundled-guava/1.9.1/iceberg-bundled-guava-1.9.1.jar \
 	cd stage; wget https://repo1.maven.org/maven2/io/trino/hadoop/hadoop-apache/3.3.5-2/hadoop-apache-3.3.5-2.jar
+
+paimom:
+	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-bundle/1.3.1/paimon-bundle-1.3.1.jar \
+	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-core/1.3.1/paimon-core-1.3.1.jar \
+	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-common/1.3.1/paimon-common-1.3.1.jar 
+

@@ -1,5 +1,5 @@
 
--- psql -h localhost -p 5433 -U dbadmin -d sales
+-- psql -h localhost -p 5432 -U dbadmin -d demog
 
 CREATE TABLE public.accountholders (
      _id                      SERIAL        NOT NULL
@@ -111,51 +111,3 @@ GRANT replicator TO dbadmin;
 -- https://www.percona.com/blog/setting-up-streaming-replication-postgresql/#:~:text=PostgreSQL%20streaming%20replication%20is%20a,mirror%20the%20primary%20database%20accurately.
 -- https://knowledge.informatica.com/s/article/ERROR-Must-be-wal-level-logical-for-logical-decoding-SQL-state-55000-while-performing-row-test-in-PowerExchange-PostgreSQL?language=en_US
 -- https://www.dbi-services.com/blog/postgresql-when-wal_level-to-logical/
-
-
-
--------------------------------------------------------------------------------------------
--- Catalogs Database
--------------------------------------------------------------------------------------------
-
-CREATE DATABASE catalogs;
-
-GRANT ALL PRIVILEGES ON DATABASE catalogs TO dbadmin;
-
--- Connect to the newly created database
-\connect catalogs;
-
-
--------------------------------------------------------------------------------------------
--- Apache Paimon JDBC Catalog Datastore
-
--- Schema that will house our Flink / Paimon JDBC catalogs
-CREATE SCHEMA IF NOT EXISTS paimon_jdbc AUTHORIZATION dbadmin;
-
--- Grant permissions to the catalog user
-GRANT ALL PRIVILEGES ON SCHEMA paimon_jdbc TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA paimon_jdbc TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA paimon_jdbc TO dbadmin;
-
--- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA paimon_jdbc GRANT ALL ON TABLES TO dbadmin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA paimon_jdbc GRANT ALL ON SEQUENCES TO dbadmin;
-
-COMMENT ON SCHEMA paimon_jdbc IS 'Paimon JDBC Catalog Storage';
-
--------------------------------------------------------------------------------------------
--- Apache Fluss JDBC Catalog Datastore
-
--- Schema that will house our Fluss JDBC catalogs
-CREATE SCHEMA IF NOT EXISTS iceberg_jdbc AUTHORIZATION dbadmin;
-
--- Grant permissions to the catalog user
-GRANT ALL PRIVILEGES ON SCHEMA iceberg_jdbc TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA iceberg_jdbc TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA iceberg_jdbc TO dbadmin;
-
--- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA iceberg_jdbc GRANT ALL ON TABLES TO dbadmin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA iceberg_jdbc GRANT ALL ON SEQUENCES TO dbadmin;
-
-COMMENT ON SCHEMA iceberg_jdbc IS 'Iceberg JDBC Catalog Storage';

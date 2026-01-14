@@ -38,8 +38,6 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
-
-      - ./data/flink/paimon:/paimon
       
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
@@ -77,8 +75,6 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
 
-      - ./data/flink/paimon:/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
@@ -98,17 +94,17 @@ services:
   ################################################################################
   postgrescdc:
     image: postgres:15
-    hostname: ${POSTGRES_CDC_HOST}
-    container_name: ${POSTGRES_CDC_HOST}
+    hostname: ${POSTGRES_HOST}
+    container_name: ${POSTGRES_HOST}
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - ${POSTGRES_PORT}:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5    
@@ -148,8 +144,8 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
-    ports:
-      - "9123:9123"
+    # ports:
+    #   - "9123:9123"
     volumes:
       # NOTE: these directories inside the containers (coordinator and tablet-servers-*) cannot be specified i.e.
       # /fluss/local-data or
@@ -171,8 +167,6 @@ services:
     container_name: tablet-server-1
     depends_on:
       - coordinator-server
-    ports:
-      - "9124:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -186,9 +180,6 @@ services:
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
-          data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
@@ -197,9 +188,9 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
+    # ports:
+    #   - "9124:9124"
     volumes:
-      - ./data/fluss/ts1/local-data:/tmp/local-data
-      - ./data/fluss/ts1/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
@@ -215,8 +206,6 @@ services:
     container_name: tablet-server-2
     depends_on:
       - coordinator-server
-    ports:
-      - "9125:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -241,6 +230,8 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
+    # ports:
+    #   - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
@@ -259,8 +250,6 @@ services:
     container_name: tablet-server-3
     depends_on:
       - coordinator-server
-    ports:
-      - "9126:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -285,6 +274,8 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                       : filesystem
 
+    # ports:
+    #   - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
@@ -301,11 +292,12 @@ services:
     image: zookeeper:3.9.2
     hostname: zookeeper
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+
+    # ports:
+    #   - "2181:2181"
     volumes:
       - ./data/zk/data:/data
       - ./data/zk/datalog:/datalog

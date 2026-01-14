@@ -103,23 +103,49 @@ services:
   ################################################################################
   postgrescdc:
     image: postgres:15
-    hostname: ${POSTGRES_CDC_HOST}
-    container_name: ${POSTGRES_CDC_HOST}
+    hostname: postgrescdc
+    container_name: postgrescdc
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - 5432:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+      - POSTGRES_DB=demog
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d demog"]
       interval: 10s
       timeout: 5s
       retries: 5    
     volumes:
-      - ./data/${POSTGRES_CDC_HOST}:/var/lib/postgresql/data
-      - ./sql/${POSTGRES_CDC_HOST}:/docker-entrypoint-initdb.d
+      - ./data/postgrescdc:/var/lib/postgresql/data
+      - ./sql/postgrescdc:/docker-entrypoint-initdb.d
+    configs:
+      - source: postgres_conf
+        target: /etc/postgresql/postgresql.conf
+      - source: postgres_hba
+        target: /etc/postgresql/data/pg_hba.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf
+
+  postgrescat:
+    image: postgres:15
+    hostname: postgrescat
+    container_name: postgrescat
+    restart: unless-stopped
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=catalogs
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d catalogs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5    
+    volumes:
+      - ./data/postgrescat:/var/lib/postgresql/data
+      - ./sql/postgrescat:/docker-entrypoint-initdb.d
     configs:
       - source: postgres_conf
         target: /etc/postgresql/postgresql.conf
@@ -131,12 +157,11 @@ services:
   # Begin Fluss cluster
   ################################################################################
   coordinator-server:
-    image: apache/fluss:0.8.0-incubating
-#    image: ${REPO_NAME}/fluss_0.8.0-incubating:1.0.0
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescat
+      - postgrescdc
       - zookeeper
     environment:
       - |
@@ -146,13 +171,10 @@ services:
           advertised.listeners                          : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
           internal.listener.name                        : INTERNAL
           
-          data.dir                                      : /fluss/local-data
-          remote.data.dir                               : /fluss/remote-data
-          
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
@@ -161,8 +183,10 @@ services:
     ports:
       - "9123:9123"
     volumes:
-      - ./data/fluss/cs/local-data:/fluss/local-data
-      - ./data/fluss/cs/remote-data:/fluss/remote-data
+      - ./data/fluss/cs/local-data:/tmp/local-data
+      - ./data/fluss/cs/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -172,7 +196,7 @@ services:
 
   # Fluss Tablet Server 1
   tablet-server-1:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-1
     container_name: tablet-server-1
     depends_on:
@@ -192,21 +216,22 @@ services:
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
-          data.dir                                      : /fluss/local-data
-          remote.data.dir                               : /fluss/remote-data
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
           
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
     volumes:
-      - ./data/fluss/ts1/local-data:/fluss/local-data
-      - ./data/fluss/ts1/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/ts1/local-data:/tmp/local-data
+      - ./data/fluss/ts1/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -216,7 +241,7 @@ services:
 
   # Fluss Tablet Server 2
   tablet-server-2:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-2
     container_name: tablet-server-2
     depends_on:
@@ -236,13 +261,13 @@ services:
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
-          data.dir                                      : /fluss/local-data
-          remote.data.dir                               : /fluss/remote-data
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
           
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
@@ -250,7 +275,8 @@ services:
     volumes:
       - ./data/fluss/ts2/local-data:/fluss/local-data
       - ./data/fluss/ts2/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -260,7 +286,7 @@ services:
 
   # Fluss Tablet Server 3
   tablet-server-3:
-    image: apache/fluss:0.8.0-incubating
+    image: georgelza/fluss_0.8.0-incubating:1.0.0
     hostname: tablet-server-3
     container_name: tablet-server-3
     depends_on:
@@ -280,15 +306,15 @@ services:
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
-          data.dir                                      : /fluss/local-data
-          remote.data.dir                               : /fluss/remote-data
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
           # or
           # remote.data.dir                             : s3://warehouse/paimon
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
@@ -297,7 +323,7 @@ services:
           # datalake.paimon.type                        : paimon
           # datalake.paimon.metastore                   : jdbc          
           # datalake.paimon.catalog-key                 : jdbc
-          # datalake.paimon.uri                         : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=fluss
+          # datalake.paimon.uri                         : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
           # datalake.paimon.jdbc.user                   : dbadmin
           # datalake.paimon.jdbc.password               : dbpassword
           # datalake.paimon.jdbc.driver                 : org.postgresql.Driver          
@@ -328,7 +354,7 @@ services:
 
           # FS Storage
           # datalake.iceberg.metastore                  : filesystem
-          # datalake.iceberg.metastore                  : /iceberg
+          # datalake.iceberg.metastore                  : /tmp/iceberg
 
           # S3 Storage
           # datalake.iceberg.warehouse                  : s3://warehouse/iceberg
@@ -347,7 +373,7 @@ services:
           
           # FS Storage
           # datalake.lance.metastore                    : filesystem
-          # datalake.lance.metastore                    : /lance
+          # datalake.lance.metastore                    : /tmp/lance
 
           # S3 Storage
           # datalake.lance.warehouse                    : s3://warehouse/iceberg
@@ -360,9 +386,10 @@ services:
 
 
     volumes:
-      - ./data/fluss/ts3/local-data:/fluss/local-data
-      - ./data/fluss/ts3/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/paimon
+      - ./data/fluss/ts3/local-data:/tmp/local-data
+      - ./data/fluss/ts3/remote-data:/tmp/remote-data
+      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -414,33 +441,6 @@ volumes:
       o: bind
       device: ./pyflink  
 
-  pg_cdc_init:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./sql/${POSTGRES_CDC_HOST}
-  pg_cat_init:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./sql/${POSTGRES_CAT_HOST}
-
-  # Create and Drop per docker compose up
-  pg_cdc_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/${POSTGRES_CDC_HOST}
-  pg_cat_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/${POSTGRES_CAT_HOST}
-      
   # Flink
   flink_logs:
     driver: local

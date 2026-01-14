@@ -146,8 +146,8 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
           datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
@@ -202,8 +202,8 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
           datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
@@ -253,8 +253,8 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
           datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
@@ -303,8 +303,8 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
           datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin

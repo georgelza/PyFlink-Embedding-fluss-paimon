@@ -15,16 +15,16 @@ services:
     hostname: postgrescdc
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - ${POSTGRES_PORT}:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
-      - POSTGRES_ROOT_PASSWORD=${POSTGRES_CDC_ROOT_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_ROOT_PASSWORD=${POSTGRES_ROOT_PASSWORD}
     healthcheck:
-      test: ["CMD", "psql", "-U", "${POSTGRES_CDC_USER}", "${POSTGRES_CDC_DB}"]
+      test: ["CMD", "psql", "-U", "${POSTGRES_USER}", "${POSTGRES_DB}"]
     volumes:
-      - ./data/${POSTGRES_CDC_HOST}:/var/lib/postgresql/data
+      - ./data/${POSTGRES_HOST}:/var/lib/postgresql/data
     configs:
       - source: postgres_conf
         target: /etc/postgresql/postgresql.conf

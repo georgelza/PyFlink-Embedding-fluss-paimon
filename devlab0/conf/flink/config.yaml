@@ -222,7 +222,7 @@ execution:
 state:
   backend:
     type: rocksdb
-    localdir: /opt/flink/rocksdb
+    localdir: file:///opt/flink/rocksdb
   checkpoints.dir: file:///opt/flink/checkpoints
 
 # The failover strategy, i.e., how the job computation recovers from task failures.
@@ -380,7 +380,7 @@ table:
   catalog-store:
     kind: file
     file:
-      path: /opt/flink/conf/catalogs
+      path: file:///opt/flink/conf/catalogs
 
 # These parameters are required for Java 17 support.
 # They can be safely removed when using Java 8/11.

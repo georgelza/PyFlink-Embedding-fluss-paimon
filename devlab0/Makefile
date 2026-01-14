@@ -11,18 +11,17 @@ Available commands:
 - run:   		Start All services -> Paimon, FS Catalog
 - run-pm-jdbc:  Start All services -> Paimon, JDBC Catalog
 - run-ib-jdbc:  Start All services -> Iceberg, JDBC Catalog
-- run-ib-pol:   Start All services -> Iceberg, Polaris Catalog
+- run-ib-pol:   Start All services -> Iceberg, Polaris/REST Catalog
 
 - deploy:		Deploy all structures
 
-- ahs_paimon	Deploy insert statement for accountHolder data feed directly into Paimon datastore
-- txns_paimon	Deploy insert statement for transaction data feed directly into Paimon datastore
+- ahs 			Deploy insert statement for accountHolder data feed into Fluss datastore
+- txns			Deploy insert statement for transaction data feed into Fluss datastore
 
-- ahs_fluss		Deploy insert statement for accountHolder data feed into Fluss datastore
-- txns_fluss	Deploy insert statement for transaction data feed into Fluss datastore
-
-- tier_p		Kick off Fluss Tiering Job - Paimon on FS
-- tier_i		Kick off Fluss Tiering Job - Iceberg on FS
+- tier_pm_fs	Kick off Fluss Tiering Job - Paimon on FS Catalog
+- tier_pm_jdbc	Kick off Fluss Tiering Job - Paimon on JDBC Catalog
+- tier_ib_jdbc	Kick off Fluss Tiering Job - Iceberg on JDBC Catalog
+- tier_ib_pol	Kick off Fluss Tiering Job - Iceberg on Polaris/REST Catalog
 
 - stop:  		Stop the project
 - start: 		Restart a stopped project
@@ -57,7 +56,7 @@ build:
 run:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc 
+	mkdir -p ./data/postgrescdc ./data/postgrescat
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
@@ -72,34 +71,34 @@ run:
 
 
 # JDBC Based Catalog, Paimon
-run-pm-j:
+run-pm-jdbc:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc 
+	mkdir -p ./data/postgrescdc ./data/postgrescat	
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon JDBC Catalog"
 	docker compose -f docker-compose-pm-jdbc.yml -p flussvector up -d \
 		jobmanager taskmanager \
- 	 	postgrescdc \
+ 	    postgrescdc postgrescat \
 		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
-.PHONY: run-pm-j
+.PHONY: run-pm-jdbc
 
 # JDBC Based Catalog, Iceberg
 run-ib-jdbc:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc 
+	mkdir -p ./data/postgrescdc ./data/postgrescat
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Iceberg JDBC Catalog"
 	docker compose -f docker-compose-ib-jdbc.yml -p flussvector up -d \
 		jobmanager taskmanager \
- 	 	postgrescdc \
+ 	 	postgrescdc postgrescat \
 		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
@@ -110,14 +109,14 @@ run-ib-jdbc:
 run-ib-pol:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc 
+	mkdir -p ./data/postgrescdc ./data/postgrescat
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
-	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Iceberg Polaris Catalog"
+	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Iceberg Polaris/REST Catalog"
 	docker compose -f docker-compose-ib-polaris.yml -p flussvector up -d \
 		jobmanager taskmanager \
- 	 	postgrescdc \
+ 	 	postgrescdc postgrescat \
 		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
@@ -134,6 +133,7 @@ down:
 	docker compose down
 	cd data/; rm -rf flink
 	cd data/; rm -rf postgrescdc
+	cd data/; rm -rf postgrescat
 	cd data/; rm -rf fluss
 	cd data/; rm -rf zk
 
@@ -162,9 +162,7 @@ cs:
 master:
 	@echo "-- Generated FS based master.sql" > ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.0.creCatGen.sql >> ./creFlinkFlows/master.sql
-	@cat ./creFlinkFlows/scripts/1.1.creCatPaimon-fs.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.2.creCatFluss.sql >> ./creFlinkFlows/master.sql
-	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow-Paimon.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow-Fluss.sql >> ./creFlinkFlows/master.sql
 	@echo "✅ master.sql for FS Storage generated"
 
@@ -174,22 +172,12 @@ deploy: master
 	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/master.sql
 
 
-# Single worker/single thread, outputting from flink directly to Paimon
-ahs_paimon:
-	@echo "-- Submitting Account Holders Embedding Job, output to Paimon..."
-	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.1.creInsertsAhSingle_paimon.sql
-
-txns_paimon:
-	@echo "-- Submitting Transaction Embedding Job, output to Paimon..."
-	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.2.creInsertsTxnSingle_paimon.sql
-
-
 # Single worker/sing thread, outputting from Flink to Fluss and down into Lakehouse tier
-ahs_fluss:
+ahs:
 	@echo "-- Submitting Account Holders Embedding Job, output to Fluss..."
 	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.1.creInsertsAhSingle_fluss.sql
 
-txns_fluss:
+txns:
 	@echo "-- Submitting Transaction Embedding Job, output to Fluss..."
 	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.2.creInsertsTxnSingle_fluss.sql
 
@@ -199,8 +187,8 @@ txns_fluss:
 
 
 # https://fluss.apache.org/docs/maintenance/tiered-storage/lakehouse-storage/#enable-lakehouse-storage	
-tier_p:
-	@echo "-- Submitting Paimon Tiering Job..."
+tier_pm_fs:
+	@echo "-- Submitting Paimon Tiering Job->FS Catalog..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
 			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \
@@ -208,11 +196,23 @@ tier_p:
 			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
 			--fluss.bootstrap.servers coordinator-server:9123 \
 			--datalake.format paimon \
-			--datalake.paimon.warehouse /paimon \
+			--datalake.paimon.warehouse /tmp/paimon \
 			--datalake.paimon.metastore filesystem 
 
-tier_i:
-	@echo "-- Submitting Iceberg Tiering Job..."
+tier_pm_jdbc:
+	@echo "-- Submitting Paimon Tiering Job->JDBC Catalog..."
+	docker compose exec --interactive --tty jobmanager \
+		/opt/flink/bin/flink run \
+			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \
+			-Dparallelism.default=2 \
+			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
+			--fluss.bootstrap.servers coordinator-server:9123 \
+			--datalake.format paimon \
+			--datalake.paimon.warehouse /tmp/paimon \
+			--datalake.paimon.metastore jdbc 
+
+tier_ib_jdbc:
+	@echo "-- Submitting Iceberg Tiering Job->JDBC Catalog..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
 			-Dpipeline.name="My Fluss Tiering Service, output to Iceberg" \
@@ -220,5 +220,17 @@ tier_i:
 			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
 			--fluss.bootstrap.servers coordinator-server:9123 \
 			--datalake.format iceberg \
-			--datalake.iceberg.type hadoop \
-			--datalake.iceberg.warehouse /paimon
+			--datalake.iceberg.warehouse /tmp/iceberg \
+			--datalake.iceberg.metastore jdbc
+
+tier_ib_pol:
+	@echo "-- Submitting Iceberg Tiering Job->REST Catalog..."
+	docker compose exec --interactive --tty jobmanager \
+		/opt/flink/bin/flink run \
+			-Dpipeline.name="My Fluss Tiering Service, output to Iceberg" \
+			-Dparallelism.default=2 \
+			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
+			--fluss.bootstrap.servers coordinator-server:9123 \
+			--datalake.format iceberg \
+			--datalake.iceberg.warehouse /tmp/iceberg \
+			--datalake.iceberg.metastore REST

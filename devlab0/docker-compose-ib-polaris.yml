@@ -38,8 +38,6 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
-
-      - ./data/flink/paimon:/paimon
       
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
@@ -77,8 +75,6 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
 
-      - ./data/flink/paimon:/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
@@ -98,23 +94,49 @@ services:
   ################################################################################
   postgrescdc:
     image: postgres:15
-    hostname: ${POSTGRES_CDC_HOST}
-    container_name: ${POSTGRES_CDC_HOST}
+    hostname: postgrescdc
+    container_name: postgrescdc
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - 5432:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+      - POSTGRES_DB=demog
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d demog"]
       interval: 10s
       timeout: 5s
       retries: 5    
     volumes:
       - ./data/postgrescdc:/var/lib/postgresql/data
       - ./sql/postgrescdc:/docker-entrypoint-initdb.d
+    configs:
+      - source: postgres_conf
+        target: /etc/postgresql/postgresql.conf
+      - source: postgres_hba
+        target: /etc/postgresql/data/pg_hba.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf
+
+  postgrescat:
+    image: postgres:15
+    hostname: postgrescat
+    container_name: postgrescat
+    restart: unless-stopped
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=catalogs
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d catalogs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5    
+    volumes:
+      - ./data/postgrescat:/var/lib/postgresql/data
+      - ./sql/postgrescat:/docker-entrypoint-initdb.d
     configs:
       - source: postgres_conf
         target: /etc/postgresql/postgresql.conf
@@ -130,7 +152,7 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescdc
+      - postgrescat
       - zookeeper
     environment:
       - |
@@ -146,14 +168,13 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
-          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
-          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.password                  : dbpassword   
           datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
-
 
     ports:
       - "9123:9123"
@@ -202,14 +223,13 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
-          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
-          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.password                  : dbpassword   
           datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
-
 
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
@@ -253,12 +273,12 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
-          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
-          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.password                  : dbpassword   
           datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
 
     volumes:
@@ -303,14 +323,13 @@ services:
           datalake.iceberg.warehouse                      : /tmp/iceberg
 
           # JDBC Catalog
-          datalake.iceberg.catalog.type                   : jdbc
-          #datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
+          #datalake.iceberg.catalog.type                   : jdbc
+          datalake.iceberg.catalog-impl                   : org.apache.iceberg.jdbc.JdbcCatalog
           #datalake.iceberg.catalog-impl                   : org.apache.fluss.lake.iceberg.shaded.org.apache.iceberg.jdbc.JdbcCatalog
-          datalake.iceberg.uri                            : jdbc:postgresql://postgrescdc:5432/catalogs?currentSchema=iceberg_jdbc
+          datalake.iceberg.uri                            : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=iceberg_jdbc
           datalake.iceberg.jdbc.user                      : dbadmin
-          datalake.iceberg.jdbc.password                  : dbpassword
+          datalake.iceberg.jdbc.password                  : dbpassword   
           datalake.iceberg.jdbc.driver                    : org.postgresql.Driver
-
 
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data

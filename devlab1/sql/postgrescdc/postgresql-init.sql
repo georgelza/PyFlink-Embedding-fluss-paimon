@@ -1,5 +1,5 @@
 
--- psql -h localhost -p 5433 -U dbadmin -d sales
+-- psql -h localhost -p 5432 -U dbadmin -d sales
 
 CREATE TABLE public.accountholders (
      _id                      SERIAL        NOT NULL
