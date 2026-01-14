@@ -30,9 +30,9 @@ devlab1/data/
 devlab0/pyflink/__pycache__
 devlab1/pyflink/__pycache__
 
-infrastructure/flink/stage
+infrastructure/flink/stage/
 
-infrastructure/fluss/stage
+infrastructure/fluss/stage/
 
 shadowtraffic/conf/license.env
 shadowtraffic/data
