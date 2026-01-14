@@ -207,8 +207,6 @@ services:
     container_name: tablet-server-1
     depends_on:
       - coordinator-server
-    ports:
-      - "9124:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -240,6 +238,8 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
           datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9124:9124"
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
@@ -258,8 +258,6 @@ services:
     container_name: tablet-server-2
     depends_on:
       - coordinator-server
-    ports:
-      - "9125:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -291,6 +289,8 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
           datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
@@ -309,8 +309,6 @@ services:
     container_name: tablet-server-3
     depends_on:
       - coordinator-server
-    ports:
-      - "9126:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -342,6 +340,8 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
           datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
@@ -358,11 +358,11 @@ services:
     image: zookeeper:3.9.2
     hostname: zookeeper
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+    ports:
+      - "2181:2181"
     volumes:
       - ./data/zk/data:/data
       - ./data/zk/datalog:/datalog

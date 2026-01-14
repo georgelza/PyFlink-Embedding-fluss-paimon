@@ -310,9 +310,8 @@ services:
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
-
-    # ports:
-    #   - "2181:2181"
+    ports:
+      - "2181:2181"
     volumes:
       - ./data/zk/data:/data
       - ./data/zk/datalog:/datalog
