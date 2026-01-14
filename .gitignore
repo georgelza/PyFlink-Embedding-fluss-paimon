@@ -27,8 +27,8 @@
 # Folders
 old/
 devlab0/data/
-devlab1/data/
-devlab2/data/
+# devlab1/data/
+# devlab2/data/
 infrastructure/flink/stage
 infrastructure/fluss/stage
 shadowtraffic/conf/license.env
