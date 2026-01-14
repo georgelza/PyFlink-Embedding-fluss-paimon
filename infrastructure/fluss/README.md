@@ -24,4 +24,4 @@ You can do allot of this from the `./infrastructure/Makefile` or do the pull fro
 
 ## NOTE 
 
-As we're using a Makefile and a dockerfile I include a repo owner, change this to your personal choice in the `.env` file, you also need to change this in the `<Project root>/devlab/.env` additionally.
+As we're using a Makefile and a dockerfile I include a repo owner, change this to your personal choice in the `.env` file, you also need to change this in the `<Project root>/devlab#/.env` additionally.

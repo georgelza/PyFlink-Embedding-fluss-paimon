@@ -14,16 +14,12 @@ Write workable demo's with the required docker-compose and Dockerfiles and all r
 4. Enable Lakehouse
    1. Fluss -> Paimon on FS with FS catalog
    2. Fluss -> Paimon on FS with JDBC catalog
-   3. Fluss -> Iceberg on FS with JDBC catalog
-   4. Fluss -> Iceberg on FS with Polaris/REST catalog
-   5. Fluss -> Paimon on MinIO/S3 with FS catalog
-   6. Fluss -> Paimon on MinIO/S3 with JDBC catalog
-   7. Fluss -> Iceberg on MinIO/S3 with JDBC catalog
-   8. Fluss -> Iceberg on MinIO/S3 with Polaris/REST catalog
+   3. Fluss -> Paimon on MinIO/S3 with FS catalog
+   4. Fluss -> Paimon on MinIO/S3 with JDBC catalog
 
-All Filesystem based options will be located in the `devlab0` subdirectory structure.
+All Filesystem (1 & 2) based options will be located in the `devlab0` subdirectory structure.
 
-All MinIO/S3 based options will be located in the `devlab1` subdirectory structure.
+All MinIO/S3 (3 & 4) based options will be located in the `devlab1` subdirectory structure.
 
 
 

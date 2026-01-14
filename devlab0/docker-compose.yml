@@ -170,7 +170,10 @@ services:
           bind.listeners                                : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
           advertised.listeners                          : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
           internal.listener.name                        : INTERNAL
-          
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
+                    
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon

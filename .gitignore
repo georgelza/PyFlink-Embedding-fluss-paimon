@@ -27,10 +27,8 @@
 # Folders
 devlab0/data/
 devlab1/data/
-devlab2/data/
 devlab0/pyflink/__pycache__
 devlab1/pyflink/__pycache__
-devlab2/pyflink/__pycache__
 
 infrastructure/flink/stage
 infrastructure/fluss/stage

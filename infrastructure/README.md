@@ -18,4 +18,4 @@ This can be done by executing the following 2 commands from the infrastructure d
 
 ## NOTE 
 
-As we're using a Makefile and a dockerfile I include a repo owner, change this to your personal choice in the `.env` file, you also need to change this in the `<Project root>/devlab/.env` additionally.
+As we're using a Makefile and a dockerfile I include a repo owner, change this to your personal choice in the `.env` file, you also need to change this in the `<Project root>/devlab#/.env` additionally.

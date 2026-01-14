@@ -22,9 +22,7 @@ Well, lets first put this out there, this is not the easiest to try and keep cle
 
 1. Remote Catalogs
 
-- JDBC -> Paimon and Iceberg
-  
-- REST/Polaris -> Iceberg
+- JDBC -> Paimon 
 
 **Lakehouse Storage**
 
@@ -51,9 +49,11 @@ After building the containers we will come to either devlab0 or devlab1 and then
 
 - make run-<option>
 
-- make deploy, 
+- make deploy
 
-- make ahs_fluss, 
+- make ahs 
+
+- make txns
 
 - Execute the load generator via the ShadoTraffic/run_pg#.sh script
 

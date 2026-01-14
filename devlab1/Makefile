@@ -8,19 +8,16 @@ Available commands:
 
 - build: 		Build required Docker images (Flink with CDC)
 
-- run:   		Start All services (Flink, Fluss, PostgreSQL & Minio/S3)
-- deploy:		Deploy all structures required for our MinIO/S3 based storage/JDBC Catalog
+- run:   		Start All services -> Paimon, FS Catalog
+- run-jdbc:  	Start All services -> Paimon, JDBC Catalog
 
-- run-fs:  		Start All services (Flink, Fluss, PostgreSQL), output onto Filesystem, Catalog on Filesystem
-- run-j:  		Start All services (Flink, Fluss, PostgreSQL), output onto Filesystem, Catalog in JDBC
-- deploy-fs:	Deploy all structures required for our Filesystem based storage/JDBC Catalog
+- deploy:		Deploy all structures
 
-- ahs_paimon	Deploy insert statement for accountHolder data feed into Paimon datastore
-- txns_paimon	Deploy insert statement for transaction data feed into Paimon datastore
+- ahs 			Deploy insert statement for accountHolder data feed into Fluss datastore
+- txns			Deploy insert statement for transaction data feed into Fluss datastore
 
-- ahs_fluss		Deploy insert statement for accountHolder data feed into Fluss datastore
-- txns_fluss	Deploy insert statement for transaction data feed into Fluss datastore
-- tier			Kick off Fluss Tiering Job
+- tier_fs		Kick off Fluss Tiering Job - Paimon on FS Catalog
+- tier_jdbc		Kick off Fluss Tiering Job - Paimon on JDBC Catalog
 
 - stop:  		Stop the project
 - start: 		Restart a stopped project
