@@ -56,15 +56,16 @@ build:
 run:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc ./data/postgrescat
+	mkdir -p ./data/postgrescdc
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon Filesystem Catalog"
 	docker compose -f docker-compose-pm-fs.yml -p flussvector up -d \
 		jobmanager taskmanager \
+		zookeeper \
  	 	postgrescdc \
-		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
+		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
 .PHONY: run
@@ -81,8 +82,9 @@ run-pm-jdbc:
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon JDBC Catalog"
 	docker compose -f docker-compose-pm-jdbc.yml -p flussvector up -d \
 		jobmanager taskmanager \
+		zookeeper \
  	    postgrescdc postgrescat \
-		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
+		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
 .PHONY: run-pm-jdbc
@@ -98,8 +100,9 @@ run-ib-jdbc:
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Iceberg JDBC Catalog"
 	docker compose -f docker-compose-ib-jdbc.yml -p flussvector up -d \
 		jobmanager taskmanager \
+		zookeeper \
  	 	postgrescdc postgrescat \
-		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
+		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
 .PHONY: run-ib-j
@@ -116,8 +119,9 @@ run-ib-pol:
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Iceberg Polaris/REST Catalog"
 	docker compose -f docker-compose-ib-polaris.yml -p flussvector up -d \
 		jobmanager taskmanager \
+		zookeeper \
  	 	postgrescdc postgrescat \
-		zookeeper coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
+		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
 .PHONY: run-ib-pol
@@ -163,7 +167,7 @@ master:
 	@echo "-- Generated FS based master.sql" > ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.0.creCatGen.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.2.creCatFluss.sql >> ./creFlinkFlows/master.sql
-	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow-Fluss.sql >> ./creFlinkFlows/master.sql
+	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow.sql >> ./creFlinkFlows/master.sql
 	@echo "✅ master.sql for FS Storage generated"
 
 
@@ -175,11 +179,11 @@ deploy: master
 # Single worker/sing thread, outputting from Flink to Fluss and down into Lakehouse tier
 ahs:
 	@echo "-- Submitting Account Holders Embedding Job, output to Fluss..."
-	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.1.creInsertsAhSingle_fluss.sql
+	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.1.creInsertsAhSingle.sql
 
 txns:
 	@echo "-- Submitting Transaction Embedding Job, output to Fluss..."
-	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.2.creInsertsTxnSingle_fluss.sql
+	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.2.creInsertsTxnSingle.sql
 
 
 # Multiple workers/multiple threads

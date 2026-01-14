@@ -126,7 +126,6 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescdc
       - zookeeper
     environment:
       - |
@@ -183,11 +182,11 @@ services:
           coordinator.host                              : coordinator-server
           coordinator.port                              : 9123
 
-          data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
@@ -228,9 +227,6 @@ services:
           coordinator.host                              : coordinator-server
           coordinator.port                              : 9123
 
-          data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
@@ -268,26 +264,27 @@ services:
     environment:
       - |
         FLUSS_PROPERTIES=
-          bind.listeners                                  : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
-          advertised.listeners                            : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
-          internal.listener.name                          : INTERNAL
-          tablet-server.id                                : 3          
-          zookeeper.address                               : zookeeper:2181
-          coordinator.host                                : coordinator-server
-          coordinator.port                                : 9123
-          log.segment.file-size                           : 10MB
-          kv.snapshot.interval                            : 0s
+          bind.listeners                                : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          advertised.listeners                          : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          internal.listener.name                        : INTERNAL
+          tablet-server.id                              : 3
+          zookeeper.address                             : zookeeper:2181
+          coordinator.host                              : coordinator-server
+          coordinator.port                              : 9123
 
-          data.dir                                        : /tmp/local-data
-          remote.data.dir                                 : /tmp/remote-data
+          log.segment.file-size                         : 10MB
+          kv.snapshot.interval                          : 0s
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
-          datalake.enabled                                : true
-          datalake.format                                 : paimon
-          datalake.paimon.warehouse                       : /tmp/paimon
+          datalake.enabled                              : true
+          datalake.format                               : paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                       : filesystem
+          datalake.paimon.metastore                     : filesystem
 
     ports:
       - "9126:9124"

@@ -124,6 +124,8 @@ services:
     image: postgres:15
     hostname: postgrescat
     container_name: postgrescat
+    depends_on:
+      - zookeeper
     restart: unless-stopped
     ports:
       - 5433:5432
@@ -135,7 +137,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U dbadmin -d catalogs"]
       interval: 10s
       timeout: 5s
-      retries: 5    
+      retries: 5
+      start_period: 10s
     volumes:
       - ./data/postgrescat:/var/lib/postgresql/data
       - ./sql/postgrescat:/docker-entrypoint-initdb.d
@@ -154,8 +157,8 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescat
-      - zookeeper
+      postgrescat:
+        condition: service_healthy
     environment:
       - |
         FLUSS_PROPERTIES=
