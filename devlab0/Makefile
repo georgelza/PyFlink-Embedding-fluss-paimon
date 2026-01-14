@@ -57,7 +57,7 @@ run:
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon Filesystem Catalog"
-	docker compose -f docker-compose-pm-fs.yml -p flussvector up -d \
+	docker compose -f docker-compose-fs.yml -p flussvector up -d \
 		jobmanager taskmanager \
 		zookeeper \
  	 	postgrescdc \
@@ -76,7 +76,7 @@ run-jdbc:
 	mkdir -p ./data/zk/data ./data/zk/datalogs
 
 	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon JDBC Catalog"
-	docker compose -f docker-compose-pm-jdbc.yml -p flussvector up -d \
+	docker compose -f docker-compose-jdbc.yml -p flussvector up -d \
 		jobmanager taskmanager \
 		zookeeper \
  	    postgrescdc postgrescat \
