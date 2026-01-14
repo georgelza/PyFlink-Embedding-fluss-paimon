@@ -81,9 +81,6 @@ fluss_iceberg:
 fluss_paimon:
 
 
-fluss_lance:
-
-
 misc:
 	cd stage; wget https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.1.1/commons-configuration2-2.1.1.jar \
 	cd stage; wget https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar \

@@ -28,11 +28,6 @@ pull_all: flink datastores
 flink:
 	docker pull arm64v8/flink:${FLINK_VERSION_FULL}-scala_2.12-java17
 
-polaris:
-	docker pull apache/polaris:latest
-	docker pull alpine/curl:latest
-	docker pull apache/polaris-admin-tool:latest
-
 datastores:
 	docker pull postgres:15
 	docker pull quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
