@@ -8,16 +8,14 @@ Available commands:
 
 - build: 		Build required Docker images (Flink with CDC)
 
-- run:   		Start All services -> Paimon, FS Catalog
-- run-jdbc:  	Start All services -> Paimon, JDBC Catalog
+- run:   		Start All services -> Paimon, JDBC based Catalog, MinIO/S3 based Lakehouse Storage, PostgreSQL DB's
 
 - deploy:		Deploy all structures
 
 - ahs 			Deploy insert statement for accountHolder data feed into Fluss datastore
 - txns			Deploy insert statement for transaction data feed into Fluss datastore
 
-- tier_fs		Kick off Fluss Tiering Job - Paimon on FS Catalog
-- tier_jdbc		Kick off Fluss Tiering Job - Paimon on JDBC Catalog
+- tier			Kick off Fluss Tiering Job - Paimon Lakehouse storage on MinIO/S3 with JDBC Catalog
 
 - stop:  		Stop the project
 - start: 		Restart a stopped project
@@ -47,43 +45,19 @@ build:
 	@cd ../infrastructure && make build
 .PHONY: build
 
-
-# S3/Minio based  => Default
-#
-# Default as it contains more services, and the larger set of services are all
-# stopped/deteled when you do make down or docker-compose down, the default
-# docker-compose.yml file is read and those services are torn down.
-
-# Default - File System based Catalog, Paimon, ...
 run:
-	@echo "🚀 Creating Required volumes..."
-	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
-	mkdir -p ./data/postgrescdc
-	mkdir -p ./data/fluss
-	mkdir -p ./data/zk/data ./data/zk/datalogs
-
-	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon Filesystem Catalog"
-	docker compose -f docker-compose-fs.yml -p flussvector up -d \
-		jobmanager taskmanager \
-		zookeeper \
- 	 	postgrescdc \
-		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
-		minio minio-client \
-		--remove-orphans
-	@echo "✅ Flink & Fluss stack with supporting services started successfully"
-.PHONY: run
-
-
-# JDBC Based Catalog, Paimon
-run-jdbc:
-	@echo "🚀 Creating Required volumes..."
+	@echo "🚀 Precreating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
 	mkdir -p ./data/postgrescdc ./data/postgrescat	
 	mkdir -p ./data/fluss
 	mkdir -p ./data/zk/data ./data/zk/datalogs
+	mkdir -p ./data/minio
 
-	@echo "🚀 Starting Flink & Fluss stack, supporting services (PostgreSQL)... for Paimon JDBC Catalog"
-	docker compose -f docker-compose-jdbc.yml -p flussvector up -d \
+	@echo "🚀 Starting Flink & Fluss stack"
+	@echo "   for Paimon on MinIO/S3 with JDBC Catalog"
+	@echo "   & supporting services (PostgreSQL, MinIO)"
+	@echo ""
+	docker compose -f docker-compose.yml -p flussvector up -d \
 		jobmanager taskmanager \
 		zookeeper \
  	    postgrescdc postgrescat \
@@ -91,7 +65,8 @@ run-jdbc:
 		minio minio-client \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
-.PHONY: run-pm-jdbc
+.PHONY: run-jdbc
+
 
 stop:
 	docker compose stop
@@ -104,9 +79,10 @@ down:
 	cd data/; rm -rf flink
 	cd data/; rm -rf postgrescdc
 	cd data/; rm -rf postgrescat
-	cd data/; rm -rf minio
 	cd data/; rm -rf fluss
 	cd data/; rm -rf zk
+	cd data/; rm -rf paimon
+	cd data/; rm -rf minio
 
 ps:
 	docker compose ps
@@ -129,9 +105,10 @@ jm:
 cs:
 	docker compose exec --interactive --tty coordinator-server /bin/bash
 
-# S3/Minio based
+
+# MinIO/S3 based Storage ofr Lakehouse
 master:
-	@echo "-- Generated S3 based master.sql" > ./creFlinkFlows/master.sql
+	@echo "-- Generated MinIO/S3 based master.sql" > ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.0.creCatGen.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.2.creCatFluss.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow.sql >> ./creFlinkFlows/master.sql
@@ -139,10 +116,11 @@ master:
 
 
 deploy: master
-	@echo "-- Deploying Fluss & Paimon based Catalog with MinIO/S3 Storage..."
+	@echo "-- Deploying Fluss & Paimon JDBC based Catalog with MinIO/S3 storage..."
 	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/master.sql
 
-# Single worker/single thread, outputting from flink directly to Paimon
+
+# Single worker/sing thread, outputting from Flink to Fluss and down into Lakehouse tier
 ahs:
 	@echo "-- Submitting Account Holders Embedding Job, output to Fluss..."
 	docker compose exec --interactive --tty jobmanager /opt/flink/bin/sql-client.sh -f /creFlinkFlows/scripts/4.1.creInsertsAhSingle.sql
@@ -157,19 +135,7 @@ txns:
 
 
 # https://fluss.apache.org/docs/maintenance/tiered-storage/lakehouse-storage/#enable-lakehouse-storage	
-tier_fs:
-	@echo "-- Submitting Paimon Tiering Job->FS Catalog..."
-	docker compose exec --interactive --tty jobmanager \
-		/opt/flink/bin/flink run \
-			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \
-			-Dparallelism.default=2 \
-			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
-			--fluss.bootstrap.servers coordinator-server:9123 \
-			--datalake.format paimon \
-			--datalake.paimon.warehouse ... S3 \
-			--datalake.paimon.metastore filesystem 
-
-tier_jdbc:
+tier:
 	@echo "-- Submitting Paimon Tiering Job->JDBC Catalog..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
@@ -178,5 +144,11 @@ tier_jdbc:
 			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
 			--fluss.bootstrap.servers coordinator-server:9123 \
 			--datalake.format paimon \
-			--datalake.paimon.warehouse ... S3 \
-			--datalake.paimon.metastore jdbc 
+			--datalake.paimon.warehouse /tmp/paimon \
+			--datalake.paimon.type paimon \
+			--datalake.paimon.metastore jdbc \
+			--datalake.paimon.catalog-key jdbc \
+			--datalake.paimon.uri jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc \
+			--datalake.paimon.jdbc.user dbadmin \
+			--datalake.paimon.jdbc.password dbpassword \
+			--datalake.paimon.jdbc.driver org.postgresql.Driver

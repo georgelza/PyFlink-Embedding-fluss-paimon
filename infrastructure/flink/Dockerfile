@@ -29,10 +29,10 @@ RUN mkdir -p ./plugins/s3-fs-hadoop && \
     mv /opt/flink/opt/flink-s3-fs-hadoop-${FLINK_VERSION_FULL}.jar ./plugins/s3-fs-hadoop/
 
 # 7. Install JARs: Connectors & Hadoop 
-# Note: Moving all JARs to /lib/ ensures they are in the default system classpath
 RUN echo "-> Install JARs: Postgres Driver and Flink CDC Postgres connector"
 COPY stage/flink-sql-connector-postgres-cdc-${FLINK_CDC}.jar            ${FLINK_HOME}/lib/
 
+# Jars that make the world go round, if you exclude them then most things Flink, Flink CDC, PyFlink etc simply does not work.
 # 8.
 RUN echo "-> Install JARs: Flink Generic" 
 COPY stage/flink-sql-parquet-${FLINK_VERSION_FULL}.jar                  ${FLINK_HOME}/lib/
@@ -57,26 +57,16 @@ COPY stage/fluss-fs-s3-${FLUSS}-incubating.jar                          ${FLINK_
 # Lakehouse options Libraries
 COPY stage/fluss-lake-iceberg-${FLUSS}-incubating.jar                   ${FLINK_HOME}/lib/
 COPY stage/fluss-lake-lance-${FLUSS}-incubating.jar                     ${FLINK_HOME}/lib/
+COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
 
-#COPY stage/fluss-lake-paimon-${FLUSS}-incubating.jar                    ${FLINK_HOME}/lib/
-# Special from Yuxia Luo
-COPY stage/fluss-lake-paimon-0.8-SNAPSHOT.jar                           ${FLINK_HOME}/lib/
-
-# 11.
+# 11. This is used for Flink -> Paimon table on S3 direct.
 RUN echo "-> Install JARs: Dependencies for Paimon, included is S3 dependencies"
 COPY stage/paimon-flink-${FLINK_VERSION_SHORT}-${PAIMON_VERSION}.jar            ${FLINK_HOME}/lib/
 COPY stage/paimon-s3-${PAIMON_VERSION}.jar                                      ${FLINK_HOME}/lib/
 
-# 12.
-RUN echo "-> Install JARs: Dependencies for Iceberg, included is S3 dependencie"
-COPY stage/iceberg-flink-runtime-${FLINK_VERSION_SHORT}-${ICEBERG_VERSION}.jar  ${FLINK_HOME}/lib/
-COPY stage/iceberg-aws-bundle-${ICEBERG_VERSION}.jar                            ${FLINK_HOME}/lib/
-# -> S3 required
-COPY stage/iceberg-aws-${ICEBERG_VERSION}.jar                                   ${FLINK_HOME}/lib/
-COPY stage/failsafe-3.3.2.jar                                                   ${FLINK_HOME}/lib/
 
-
-# 13. Hadoop Configuration for S3A (MinIO)
+# Using single Image for both the Fluss to FS (devlab0) and Fluss to MinIO/S3 (devlab1) examples.
+# 12. Hadoop Configuration for S3A (MinIO)
 RUN echo "--> Create Hadoop Configuration" && \
     cat > ${HIVE_HOME}/core-site.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>

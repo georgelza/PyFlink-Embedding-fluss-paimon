@@ -43,12 +43,15 @@ services:
       - AWS_DEFAULT_REGION=${AWS_REGION}
 
     volumes:
-      - flink_flows:/creFlinkFlows
-      - flink_pyflink:/pyflink
+      - ./creFlinkFlows:/creFlinkFlows
+      - ./pyflink:/pyflink
 
-      - flink_logs:/opt/flink/log
-      - flink_checkpoints:/opt/flink/checkpoints
-      - flink_rocksdb:/opt/flink/rocksdb
+      - ./data/paimon:/tmp/paimon
+
+      - ./data/flink/logs:/opt/flink/log
+      - ./data/flink/checkpoints:/opt/flink/checkpoints
+      - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -83,9 +86,12 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
       
+      - ./data/paimon:/tmp/paimon
+
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -96,7 +102,6 @@ services:
       - source: log4j-session
         target: /opt/flink/conf/log4j-session.properties
     command: taskmanager
-
 
   ################################################################################
   # Will act as a destination store from where we will CDC our data to be embedded
@@ -131,6 +136,8 @@ services:
     image: postgres:15
     hostname: postgrescat
     container_name: postgrescat
+    depends_on:
+      - zookeeper
     restart: unless-stopped
     ports:
       - 5433:5432
@@ -142,7 +149,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U dbadmin -d catalogs"]
       interval: 10s
       timeout: 5s
-      retries: 5    
+      retries: 5
+      start_period: 10s
     volumes:
       - ./data/postgrescat:/var/lib/postgresql/data
       - ./sql/postgrescat:/docker-entrypoint-initdb.d
@@ -152,7 +160,7 @@ services:
       - source: postgres_hba
         target: /etc/postgresql/data/pg_hba.conf
     command: -c config_file=/etc/postgresql/postgresql.conf
-
+      
   ################################################################################
   # Begin Fluss cluster
   ################################################################################
@@ -161,8 +169,11 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescdc
-      - zookeeper
+      postgrescat:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -172,22 +183,42 @@ services:
           internal.listener.name                        : INTERNAL
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-                    
+          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/cs/remote-storage
+
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /tmp/paimon
+          #datalake.paimon.warehouse                     : /tmp/paimon
+          datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
+          datalake.paimon.table-default.file.format     : parquet
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+
+          # S3 Storage
+          s3.endpoint                                   : ${MINIO_ENDPOINT}
+          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
+          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
+          s3.region                                     : ${AWS_REGION}
+          s3.path.style.access                          : true
 
     ports:
       - "9123:9123"
     volumes:
+      # NOTE: these directories inside the containers (coordinator and tablet-servers-*) cannot be specified i.e.
+      # /fluss/local-data or
+      # /fluss/remote_data or
+      # /paimon or /iceberg, 
+      # they all need to be configured under /tmp. 
       - ./data/fluss/cs/local-data:/tmp/local-data
       - ./data/fluss/cs/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -202,8 +233,6 @@ services:
     container_name: tablet-server-1
     depends_on:
       - coordinator-server
-    ports:
-      - "9124:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -218,20 +247,37 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-          
+          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts1/remote-storage
+
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /tmp/paimon
+          #datalake.paimon.warehouse                     : /tmp/paimon
+          datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
+          datalake.paimon.table-default.file.format     : parquet
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
+          # S3 Storage
+          s3.endpoint                                   : ${MINIO_ENDPOINT}
+          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
+          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
+          s3.region                                     : ${AWS_REGION}
+          s3.path.style.access                          : true
+
+    ports:
+      - "9124:9124"
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -246,8 +292,6 @@ services:
     container_name: tablet-server-2
     depends_on:
       - coordinator-server
-    ports:
-      - "9125:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -262,20 +306,37 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-          
+          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts2/remote-storage
+
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /tmp/paimon
+          #datalake.paimon.warehouse                     : /tmp/paimon
+          datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
+          datalake.paimon.table-default.file.format     : parquet
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
+          # S3 Storage
+          s3.endpoint                                   : ${MINIO_ENDPOINT}
+          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
+          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
+          s3.region                                     : ${AWS_REGION}
+          s3.path.style.access                          : true
+
+    ports:
+      - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/fluss/local-data
       - ./data/fluss/ts2/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -290,8 +351,6 @@ services:
     container_name: tablet-server-3
     depends_on:
       - coordinator-server
-    ports:
-      - "9126:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -306,49 +365,37 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : /tmp/remote-data
-          # or
-          # remote.data.dir                             : s3://warehouse/paimon
-
+          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts3/remote-storage
+          
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          datalake.paimon.warehouse                     : /tmp/paimon
+          #datalake.paimon.warehouse                     : /tmp/paimon
+          datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
+          datalake.paimon.table-default.file.format     : parquet
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
-
-          # JDBC Catalog, storage on FS
-          # datalake.paimon.type                        : paimon
-          # datalake.paimon.metastore                   : jdbc          
-          # datalake.paimon.catalog-key                 : jdbc
-          # datalake.paimon.uri                         : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
-          # datalake.paimon.jdbc.user                   : dbadmin
-          # datalake.paimon.jdbc.password               : dbpassword
-          # datalake.paimon.jdbc.driver                 : org.postgresql.Driver          
-          # datalake.paimon.table-default.file.format   : parquet
-
-
-          # Paimon
-          # datalake.format                             : paimon
-          # datalake.paimon.type                        : paimon
-
-          # FS Storage
-          # datalake.paimon.metastore                   : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
           # S3 Storage
-          # datalake.paimon.warehouse                   : s3://warehouse/paimon
-          # datalake.paimon.s3.endpoint                 : http://minio:9000
-          # datalake.paimon.s3.access-key               : mnadmin
-          # datalake.paimon.s3.secret-key               : mnpassword
-          # datalake.paimon.s3.region                   : af-south-1
-          # datalake.paimon.s3.path.style.access        : true
-          # datalake.paimon.table-default.file.format   : parquet
+          s3.endpoint                                   : ${MINIO_ENDPOINT}
+          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
+          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
+          s3.region                                     : ${AWS_REGION}
+          s3.path.style.access                          : true
 
+    ports:
+      - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -375,67 +422,87 @@ services:
       timeout: 5s
       retries: 5
 
-
-
 ################################################################################
-# The below volume based approach with driver_opts gives you more control
-# but requires the directories to exist before starting Docker Compose.
-# implies precreating the directory using mkdir in say the Makefile
+  # MinIO Object Storage - S3 Compatible Storage
+  ################################################################################  
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    hostname: minio
+    container_name: minio
+    ports:
+      - 9000:9000  # API address   
+      - 9001:9001  # Web UI console
+    environment:  
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}          # access.key: mnadmin
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}  # secret.key: mnpassword
+      - AWS_REGION=${AWS_REGION}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DOMAIN=${MINIO_ALIAS}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+    volumes:
+      - minio_data:/data    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 5s
+    command: ["server", "/data", "--console-address", ":9001"]
+
+  minio-client:
+    image: minio/mc:latest
+    hostname: mc
+    container_name: mc
+    depends_on:
+      minio:
+        condition: 
+          service_healthy    
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DOMAIN=${MINIO_ALIAS}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set ${MINIO_ALIAS} ${MINIO_ENDPOINT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}) do echo '...waiting...' && sleep 1; done;
+
+      mc rm -r --force ${MINIO_ALIAS}/${MINIO_BUCKET};  
+
+      mc mb ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon --ignore-existing;
+
+      mc policy set public ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon;
+
+      mc anonymous set public ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon;
+
+      mc ls ${MINIO_ALIAS};
+
+      echo "MinIO bucket '${MINIO_ALIAS}/${MINIO_BUCKET}' created successfully";
+      tail -f /dev/null
+      "
+
+
+# Just a little introduction to using volumes in docker-compose
+#
+# Minio volume mounts, which references minio_data, which then defines where it is located locally.s
+# these locations need to be pre existing, this the mkdir in the Makefile.
 volumes:
-  # The most common, standard used at the top here, less used, more project specific lower dow
-  # or defined inside the service to make it more self contained.
 
-  # Pre existing
-  flink_flows:
+  minio_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./creFlinkFlows
-  flink_pyflink:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./pyflink  
-
-  # Flink
-  flink_logs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/logs
-  flink_checkpoints:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/checkpoints
-  flink_rocksdb:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/rocksdb
-
-  # Fluss
-
-  # Zookeeper, as part of Fluss
-  zk_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/zk/data
-  zk_datalogs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/zk/datalogs
-
+      device: ./data/minio
 
 ################################################################################
 # Without a network explicitly defined, you hit this Hive/Thrift error

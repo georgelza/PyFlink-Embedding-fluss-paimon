@@ -16,8 +16,8 @@ Available commands:
 - ahs 			Deploy insert statement for accountHolder data feed into Fluss datastore
 - txns			Deploy insert statement for transaction data feed into Fluss datastore
 
-- tier_fs		Kick off Fluss Tiering Job - Paimon on FS Catalog
-- tier_jdbc		Kick off Fluss Tiering Job - Paimon on JDBC Catalog
+- tier_fs		Kick off Fluss Tiering Job - Paimon Lakehouse storage FS with FS based Catalog
+- tier_jdbc		Kick off Fluss Tiering Job - Paimon Lakehouse storage FS with JDBC based Catalog
 
 - stop:  		Stop the project
 - start: 		Restart a stopped project
@@ -51,7 +51,7 @@ run: run-fs
 
 # Default - File System based Catalog, Paimon, ...
 run-fs:
-	@echo "🚀 Creating Required volumes..."
+	@echo "🚀 Precreating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
 	mkdir -p ./data/postgrescdc
 	mkdir -p ./data/fluss
@@ -70,7 +70,7 @@ run-fs:
 
 # JDBC Based Catalog, Paimon
 run-jdbc:
-	@echo "🚀 Creating Required volumes..."
+	@echo "🚀 Precreating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
 	mkdir -p ./data/postgrescdc ./data/postgrescat	
 	mkdir -p ./data/fluss

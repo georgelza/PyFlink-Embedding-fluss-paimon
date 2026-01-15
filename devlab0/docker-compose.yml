@@ -382,67 +382,6 @@ services:
       retries: 5
 
 
-
-################################################################################
-# The below volume based approach with driver_opts gives you more control
-# but requires the directories to exist before starting Docker Compose.
-# implies precreating the directory using mkdir in say the Makefile
-
-volumes:
-  # The most common, standard used at the top here, less used, more project specific lower dow
-  # or defined inside the service to make it more self contained.
-
-  # Pre existing
-  flink_flows:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./creFlinkFlows
-  flink_pyflink:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./pyflink  
-
-  # Flink
-  flink_logs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/logs
-  flink_checkpoints:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/checkpoints
-  flink_rocksdb:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/flink/rocksdb
-
-  # Fluss
-
-  # Zookeeper, as part of Fluss
-  zk_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/zk/data
-  zk_datalogs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/zk/datalogs
-
-
 ################################################################################
 # Without a network explicitly defined, you hit this Hive/Thrift error
 # java.net.URISyntaxException Illegal character in hostname

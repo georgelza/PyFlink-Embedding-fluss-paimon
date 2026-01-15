@@ -1,7 +1,7 @@
 
 ## Boot strapping our environment.
 
-From within `<Project root>/devlab0/` or `<Project root>/devlab1/`
+From within `<Project root>/devlab1/`
 
 
 ## Deployment
@@ -24,16 +24,13 @@ Base on the above... please bear with me while I try and keep the project repo m
 
 Idea... 
 
-- everything in `devlab0` is for Lakehouse -> storage on local file system
+- everything in `<Project root>/devlab0` is for Lakehouse -> storage on local file system
 
   - **NOTES:** For using local File System during testing as lakehouse storage, Dual mount your ./tmp/paimon in container to say ./data/paimon: locally, This needs to be done in BOTH the Flink containers (Jobmanager, TaskManager) and the Fluss Incubating containers (coordinator-server and tablet-servers).
 
-- everything in `devlab1` is for Lakehouse -> storage on MinIO/S3 
-  
   
 ## Running a stack
 
-Both `devlab0` and `devlab1` will follow the same pattern.
 
 We start with building the containers, for this we have one set, will try and add enough comments into the Apache Flink and Apache Fluss (Incubating) `Dockerfiles` to make it as clear as possible what JAR's are included for what purpose/scenario.
 

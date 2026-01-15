@@ -379,6 +379,7 @@ services:
       timeout: 5s
       retries: 5
 
+
 ################################################################################
 # Without a network explicitly defined, you hit this Hive/Thrift error
 # java.net.URISyntaxException Illegal character in hostname

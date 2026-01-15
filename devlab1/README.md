@@ -1,14 +1,8 @@
 
 ## Boot strapping our environment.
 
-From within `<Project root>/devlab/`
+From within `<Project root>/devlab1/`
 
-We can take the environment through various phases. 
-
-
-- Our `devlab/creFlinkFlows/1.1.creCat.sql` script also provides the required command to create Paimon based catalog.
-  
-- If you want, you can deploy the Apache Flink Cluster, allowing you move data across the Flink stack and additionally the accompanying PyFlink routines that will calculate vector embedding values for the accountholders and transactions. These values will be pushed as a new record into accountholder and transactions tables (which will be stored in Apache Paimon).
 
 ## Deployment
 
@@ -16,84 +10,29 @@ Well, lets first put this out there, this is not the easiest to try and keep cle
 
 **Catalogs:**
 
-1. Local/FS Catalog
-
-- Local/FS -> Paimon
-
-1. Remote Catalogs
-
-- JDBC -> Paimon and Iceberg
-  
-- REST/Polaris -> Iceberg
+1. Remote Catalogs inside JDBC based datastore, PostgreSQL in this case.
 
 **Lakehouse Storage**
 
-1. Local/FS storage
+1. Remote Lakehouse storage inside MinIO/S3 object store.
 
-2. Remote MinIO/S3 storage
-
-Base on the above... please bear with me while I try and keep the project repo making sense.
-
-Idea... 
-
-- everything in devlab0 is for Lakehouse -> storage on local file system
-  
-- everything in devlab1 is for Lakehouse -> storage on MinIO/S3 
+- everything in `<Project root>/devlab1` is for Lakehouse -> storage on MinIO/S3 
   
   
 ## Running a stack
 
-Both devlab0 and devlab1 will follow the same pattern.
-
-We start with building the containers, for this we have one set, will try and add enough comments into the Apache Flink and Apache Fluss (Incubating) Dockerfiles to make it as clear as possible what JAR's are included for what purpose/scenario.
+We start with building the containers, for this we have one set, will try and add enough comments into the Apache Flink and Apache Fluss (Incubating) `Dockerfiles` to make it as clear as possible what JAR's are included for what purpose/scenario.
 
 After building the containers we will come to either devlab0 or devlab1 and then do the various 
 
-- make run-<option>
+- `make run`
+  
+- `make deploy`
 
-- make deploy, 
-
-- make ahs_fluss, 
-
-- Execute the load generator via the ShadoTraffic/run_pg#.sh script
-
-- make tier_<>.
-
-
-### 1. MinIO/S3 Based deployment
-
-`make run`
-
-This will bring up our Apache Flink, JDBC based catalog with PostgreSQL for persistence and lakehouser storage on S3 based Object storage by MinIO service.
-
-`make deploy`
-
-This will create our `c_paimon` catalog on the MinIO/S3 `warehouse/paimon` object store.
-
-
-### 2. FilesystemS3 Based deployment
-
-`make run-fs`
-
-This will bring up our Apache Flink, JDBC based catalog with PostgreSQL for persistence and lakehouse storage on local file system.
-
-`make deploy-fs`
-
-This will create our `c_paimon` catalog on the local file system into `./data/flink/paimon` as mounted into container as /data.
-
-
-### 3. Deploy single worker Embedding job for our accountHolder data products
-
-- `make ahs`
-
-
-### 4. Deploy single worker Embedding job for our transactions data products
+- `make ahs `
 
 - `make txns`
 
+- Execute the load generator via the `<project root>/shadowtraffic/run_pg#.sh` script
 
-### 5. Run our Shadowtraffic data generator
-
-From within `<Project root>/shadowtraffic`
-
-Execute run_pg1.sh
+- `make tier`
