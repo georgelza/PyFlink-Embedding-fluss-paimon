@@ -202,10 +202,10 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
           # S3 Storage
-          s3.endpoint                                   : ${MINIO_ENDPOINT}
-          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
-          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
-          s3.region                                     : ${AWS_REGION}
+          s3.endpoint                                   : http://minio:9000
+          s3.access-key                                 : mnadmin
+          s3.secret-key                                 : mnpassword
+          s3.region                                     : af-south-1
           s3.path.style.access                          : true
 
     ports:
@@ -266,11 +266,12 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
           # S3 Storage
-          s3.endpoint                                   : ${MINIO_ENDPOINT}
-          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
-          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
-          s3.region                                     : ${AWS_REGION}
+          s3.endpoint                                   : http://minio:9000
+          s3.access-key                                 : mnadmin
+          s3.secret-key                                 : mnpassword
+          s3.region                                     : af-south-1
           s3.path.style.access                          : true
+
 
     ports:
       - "9124:9124"
@@ -325,17 +326,17 @@ services:
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
           # S3 Storage
-          s3.endpoint                                   : ${MINIO_ENDPOINT}
-          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
-          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
-          s3.region                                     : ${AWS_REGION}
+          s3.endpoint                                   : http://minio:9000
+          s3.access-key                                 : mnadmin
+          s3.secret-key                                 : mnpassword
+          s3.region                                     : af-south-1
           s3.path.style.access                          : true
 
     ports:
       - "9125:9124"
     volumes:
-      - ./data/fluss/ts2/local-data:/fluss/local-data
-      - ./data/fluss/ts2/remote-data:/fluss/remote-data
+      - ./data/fluss/ts2/local-data:/tmp/local-data
+      - ./data/fluss/ts2/remote-data:/tmp/remote-data
       - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
@@ -383,12 +384,13 @@ services:
           datalake.paimon.jdbc.password                 : dbpassword
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
-          # S3 Storage
-          s3.endpoint                                   : ${MINIO_ENDPOINT}
-          s3.access-key                                 : ${AWS_ACCESS_KEY_ID}
-          s3.secret-key                                 : ${AWS_SECRET_ACCESS_KEY}
-          s3.region                                     : ${AWS_REGION}
+           # S3 Storage
+          s3.endpoint                                   : http://minio:9000
+          s3.access-key                                 : mnadmin
+          s3.secret-key                                 : mnpassword
+          s3.region                                     : af-south-1
           s3.path.style.access                          : true
+
 
     ports:
       - "9126:9124"
