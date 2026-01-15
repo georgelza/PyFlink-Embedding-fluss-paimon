@@ -46,9 +46,12 @@ services:
       - flink_flows:/creFlinkFlows
       - flink_pyflink:/pyflink
 
-      - flink_logs:/opt/flink/log
-      - flink_checkpoints:/opt/flink/checkpoints
-      - flink_rocksdb:/opt/flink/rocksdb
+      - ./data/paimon:/tmp/paimon
+
+      - ./data/flink/logs:/opt/flink/log
+      - ./data/flink/checkpoints:/opt/flink/checkpoints
+      - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -83,9 +86,12 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
       
+      - ./data/paimon:/tmp/paimon
+
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -182,14 +188,12 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
-
     ports:
       - "9123:9123"
     volumes:
       - ./data/fluss/cs/local-data:/tmp/local-data
       - ./data/fluss/cs/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -233,8 +237,7 @@ services:
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -278,8 +281,7 @@ services:
     volumes:
       - ./data/fluss/ts2/local-data:/fluss/local-data
       - ./data/fluss/ts2/remote-data:/fluss/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -349,50 +351,10 @@ services:
           # datalake.paimon.s3.path.style.access        : true
           # datalake.paimon.table-default.file.format   : parquet
 
-
-
-          # Iceberg
-          # datalake.format                             : iceberg
-          # datalake.iceberg.type                       : iceberg
-
-          # FS Storage
-          # datalake.iceberg.metastore                  : filesystem
-          # datalake.iceberg.metastore                  : /tmp/iceberg
-
-          # S3 Storage
-          # datalake.iceberg.warehouse                  : s3://warehouse/iceberg
-          # datalake.iceberg.s3.endpoint                : http://minio:9000
-          # datalake.iceberg.s3.access-key              : mnadmin
-          # datalake.iceberg.s3.secret-key              : mnpassword
-          # datalake.iceberg.s3.region                  : af-south-1
-          # datalake.iceberg.s3.path.style.access       : true
-          # datalake.iceberg.table-default.file.format  : parquet
-
-
-
-          # Lance
-          # datalake.format                             : lance
-          # datalake.lance.type                         : lance
-          
-          # FS Storage
-          # datalake.lance.metastore                    : filesystem
-          # datalake.lance.metastore                    : /tmp/lance
-
-          # S3 Storage
-          # datalake.lance.warehouse                    : s3://warehouse/iceberg
-          # datalake.lance.s3.endpoint                  : http://minio:9000
-          # datalake.lance.s3.access-key                : mnadmin
-          # datalake.lance.s3.secret-key                : mnpassword
-          # datalake.lance.s3.region                    : af-south-1
-          # datalake.lance.s3.path.style.access         : true
-          # datalake.lance.table-default.file.format    : parquet
-
-
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s

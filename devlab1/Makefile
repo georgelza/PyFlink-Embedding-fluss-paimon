@@ -129,13 +129,11 @@ jm:
 cs:
 	docker compose exec --interactive --tty coordinator-server /bin/bash
 
-# S3/Minio based  => Default
+# S3/Minio based
 master:
 	@echo "-- Generated S3 based master.sql" > ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.0.creCatGen.sql >> ./creFlinkFlows/master.sql
-	@cat ./creFlinkFlows/scripts/1.1.creCatPaimon.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/1.2.creCatFluss.sql >> ./creFlinkFlows/master.sql
-	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow.sql >> ./creFlinkFlows/master.sql
 	@cat ./creFlinkFlows/scripts/3.1.creTargetFinflow.sql >> ./creFlinkFlows/master.sql
 	@echo "✅ master.sql for MinIO/S3 Storage generated"
 

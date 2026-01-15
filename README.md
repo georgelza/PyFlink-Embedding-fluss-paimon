@@ -19,7 +19,11 @@ Write workable demo's with the required docker-compose and Dockerfiles and all r
 
 All Filesystem (1 & 2) based options will be located in the `devlab0` subdirectory structure.
 
+**NOTES:** For using local File System during testing as lakehouse storage, Dual mount your ./tmp/paimon in container to say ./data/paimon: locally, This needs to be done in BOTH the Flink containers (Jobmanager, TaskManager) and the Fluss Incubating containers (coordinator-server and tablet-servers).
+
+
 All MinIO/S3 (3 & 4) based options will be located in the `devlab1` subdirectory structure.
+
 
 
 

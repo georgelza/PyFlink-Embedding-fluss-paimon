@@ -38,10 +38,13 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
-      
+
+      - ./data/paimon:/tmp/paimon
+
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -74,10 +77,13 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
+      
+      - ./data/paimon:/tmp/paimon
 
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -156,7 +162,7 @@ services:
       # they all need to be configured under /tmp. 
       - ./data/fluss/cs/local-data:/tmp/local-data
       - ./data/fluss/cs/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -201,7 +207,7 @@ services:
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -246,7 +252,7 @@ services:
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -291,7 +297,7 @@ services:
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
-      - ./data/fluss/paimon:/tmp/paimon
+      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s

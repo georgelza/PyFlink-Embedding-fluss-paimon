@@ -19,7 +19,7 @@ services:
   ################################################################################
   # begin Flink cluster
   #
-  # Lots of Jar's added to the base image, Fluss, JDBC, PostgreSQL, Paimon, S3
+  # Lots of Jar's added to the base image, Fluss, JDBC, PostgreSQL, Paimon
   ################################################################################
   jobmanager:
     image: ${REPO_NAME}/apacheflink-1.20.2-scala_2.12-java17:1.0.4
@@ -38,12 +38,11 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
-
-      - ./data/flink/paimon:/paimon
       
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -77,11 +76,10 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
 
-      - ./data/flink/paimon:/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
+      - ./data/flink/catalogs:/opt/flink/conf/catalogs
     configs:
       - source: flink-conf
         target: /opt/flink/conf/config.yaml
@@ -98,17 +96,17 @@ services:
   ################################################################################
   postgrescdc:
     image: postgres:15
-    hostname: ${POSTGRES_CDC_HOST}
-    container_name: ${POSTGRES_CDC_HOST}
+    hostname: postgrescdc
+    container_name: postgrescdc
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - 5432:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+      - POSTGRES_DB=demog
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d demog"]
       interval: 10s
       timeout: 5s
       retries: 5    
@@ -122,6 +120,35 @@ services:
         target: /etc/postgresql/data/pg_hba.conf
     command: -c config_file=/etc/postgresql/postgresql.conf
 
+  postgrescat:
+    image: postgres:15
+    hostname: postgrescat
+    container_name: postgrescat
+    depends_on:
+      - zookeeper
+    restart: unless-stopped
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=catalogs
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=dbpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d catalogs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - ./data/postgrescat:/var/lib/postgresql/data
+      - ./sql/postgrescat:/docker-entrypoint-initdb.d
+    configs:
+      - source: postgres_conf
+        target: /etc/postgresql/postgresql.conf
+      - source: postgres_hba
+        target: /etc/postgresql/data/pg_hba.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf
+      
   ################################################################################
   # Begin Fluss cluster
   ################################################################################
@@ -130,8 +157,8 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescdc
-      - zookeeper
+      postgrescat:
+        condition: service_healthy
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -140,13 +167,23 @@ services:
           zookeeper.address                             : zookeeper:2181
           internal.listener.name                        : INTERNAL
 
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
+
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon 
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
 
     ports:
       - "9123:9123"
@@ -156,8 +193,9 @@ services:
       # /fluss/remote_data or
       # /paimon or /iceberg, 
       # they all need to be configured under /tmp. 
+      - ./data/fluss/cs/local-data:/tmp/local-data
+      - ./data/fluss/cs/remote-data:/tmp/remote-data      
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -172,8 +210,6 @@ services:
     container_name: tablet-server-1
     depends_on:
       - coordinator-server
-    ports:
-      - "9124:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -195,14 +231,22 @@ services:
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9124:9124"
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -217,8 +261,6 @@ services:
     container_name: tablet-server-2
     depends_on:
       - coordinator-server
-    ports:
-      - "9125:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -240,14 +282,22 @@ services:
           datalake.format                               : paimon
           datalake.paimon.warehouse                     : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                     : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -262,8 +312,6 @@ services:
     container_name: tablet-server-3
     depends_on:
       - coordinator-server
-    ports:
-      - "9126:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -285,14 +333,22 @@ services:
           datalake.format                                 : paimon
           datalake.paimon.warehouse                       : /tmp/paimon
 
-          # FS Based Catalogs
-          datalake.paimon.metastore                       : filesystem
+          # JDBC Catalog
+          datalake.paimon.type                          : paimon
+          datalake.paimon.metastore                     : jdbc
+          datalake.paimon.catalog-key                   : jdbc
+          datalake.paimon.uri                           : jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc
+          datalake.paimon.jdbc.user                     : dbadmin
+          datalake.paimon.jdbc.password                 : dbpassword
+          datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          datalake.paimon.table-default.file.format     : parquet
 
+    ports:
+      - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -305,11 +361,11 @@ services:
     image: zookeeper:3.9.2
     hostname: zookeeper
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+    ports:
+      - "2181:2181"
     volumes:
       - ./data/zk/data:/data
       - ./data/zk/datalog:/datalog
@@ -318,7 +374,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
 
 ################################################################################
 # Without a network explicitly defined, you hit this Hive/Thrift error

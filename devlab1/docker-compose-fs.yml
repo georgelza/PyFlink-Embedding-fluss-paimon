@@ -38,8 +38,6 @@ services:
     volumes:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
-
-      - ./data/flink/paimon:/paimon
       
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
@@ -77,8 +75,6 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
 
-      - ./data/flink/paimon:/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
@@ -98,17 +94,17 @@ services:
   ################################################################################
   postgrescdc:
     image: postgres:15
-    hostname: ${POSTGRES_CDC_HOST}
-    container_name: ${POSTGRES_CDC_HOST}
+    hostname: ${POSTGRES_HOST}
+    container_name: ${POSTGRES_HOST}
     restart: unless-stopped
     ports:
-      - ${POSTGRES_CDC_PORT}:5432
+      - ${POSTGRES_PORT}:5432
     environment:
-      - POSTGRES_DB=${POSTGRES_CDC_DB}
-      - POSTGRES_USER=${POSTGRES_CDC_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_CDC_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CDC_USER} -d ${POSTGRES_CDC_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5    
@@ -130,7 +126,6 @@ services:
     hostname: coordinator-server
     container_name: coordinator-server
     depends_on:
-      - postgrescdc
       - zookeeper
     environment:
       - |
@@ -139,6 +134,9 @@ services:
           advertised.listeners                          : INTERNAL://coordinator-server:9124, CLIENT://coordinator-server:9123
           zookeeper.address                             : zookeeper:2181
           internal.listener.name                        : INTERNAL
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
@@ -156,8 +154,9 @@ services:
       # /fluss/remote_data or
       # /paimon or /iceberg, 
       # they all need to be configured under /tmp. 
+      - ./data/fluss/cs/local-data:/tmp/local-data
+      - ./data/fluss/cs/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -172,8 +171,6 @@ services:
     container_name: tablet-server-1
     depends_on:
       - coordinator-server
-    ports:
-      - "9124:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -184,6 +181,7 @@ services:
           zookeeper.address                             : zookeeper:2181
           coordinator.host                              : coordinator-server
           coordinator.port                              : 9123
+
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
@@ -198,11 +196,12 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
+    ports:
+      - "9124:9124"
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -217,8 +216,6 @@ services:
     container_name: tablet-server-2
     depends_on:
       - coordinator-server
-    ports:
-      - "9125:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -229,6 +226,7 @@ services:
           zookeeper.address                             : zookeeper:2181
           coordinator.host                              : coordinator-server
           coordinator.port                              : 9123
+
           log.segment.file-size                         : 10MB
           kv.snapshot.interval                          : 0s
 
@@ -243,11 +241,12 @@ services:
           # FS Based Catalogs
           datalake.paimon.metastore                     : filesystem
 
+    ports:
+      - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -262,37 +261,37 @@ services:
     container_name: tablet-server-3
     depends_on:
       - coordinator-server
-    ports:
-      - "9126:9124"
     environment:
       - |
         FLUSS_PROPERTIES=
-          bind.listeners                                  : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
-          advertised.listeners                            : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
-          internal.listener.name                          : INTERNAL
-          tablet-server.id                                : 3          
-          zookeeper.address                               : zookeeper:2181
-          coordinator.host                                : coordinator-server
-          coordinator.port                                : 9123
-          log.segment.file-size                           : 10MB
-          kv.snapshot.interval                            : 0s
+          bind.listeners                                : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          advertised.listeners                          : INTERNAL://tablet-server-3:9124, CLIENT://tablet-server-3:9123
+          internal.listener.name                        : INTERNAL
+          tablet-server.id                              : 3
+          zookeeper.address                             : zookeeper:2181
+          coordinator.host                              : coordinator-server
+          coordinator.port                              : 9123
 
-          data.dir                                        : /tmp/local-data
-          remote.data.dir                                 : /tmp/remote-data
+          log.segment.file-size                         : 10MB
+          kv.snapshot.interval                          : 0s
+
+          data.dir                                      : /tmp/local-data
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
-          datalake.enabled                                : true
-          datalake.format                                 : paimon
-          datalake.paimon.warehouse                       : /tmp/paimon
+          datalake.enabled                              : true
+          datalake.format                               : paimon
+          datalake.paimon.warehouse                     : /tmp/paimon
 
           # FS Based Catalogs
-          datalake.paimon.metastore                       : filesystem
+          datalake.paimon.metastore                     : filesystem
 
+    ports:
+      - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
       - ./data/fluss/paimon:/tmp/paimon
-      - ./data/fluss/iceberg:/tmp/iceberg
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -305,11 +304,11 @@ services:
     image: zookeeper:3.9.2
     hostname: zookeeper
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+    ports:
+      - "2181:2181"
     volumes:
       - ./data/zk/data:/data
       - ./data/zk/datalog:/datalog

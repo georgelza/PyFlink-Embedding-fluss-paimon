@@ -47,9 +47,10 @@ build:
 	@cd ../infrastructure && make build
 .PHONY: build
 
+run: run-fs
 
 # Default - File System based Catalog, Paimon, ...
-run:
+run-fs:
 	@echo "🚀 Creating Required volumes..."
 	mkdir -p ./data/flink/logs ./data/flink/checkpoints ./data/flink/rocksdb
 	mkdir -p ./data/postgrescdc
@@ -64,7 +65,7 @@ run:
 		coordinator-server tablet-server-1 tablet-server-2 tablet-server-3 \
 		--remove-orphans
 	@echo "✅ Flink & Fluss stack with supporting services started successfully"
-.PHONY: run
+.PHONY: run-fs
 
 
 # JDBC Based Catalog, Paimon
@@ -99,6 +100,7 @@ down:
 	cd data/; rm -rf postgrescat
 	cd data/; rm -rf fluss
 	cd data/; rm -rf zk
+	cd data/; rm -rf paimon
 
 ps:
 	docker compose ps
@@ -172,4 +174,10 @@ tier_jdbc:
 			--fluss.bootstrap.servers coordinator-server:9123 \
 			--datalake.format paimon \
 			--datalake.paimon.warehouse /tmp/paimon \
-			--datalake.paimon.metastore jdbc 
+			--datalake.paimon.type paimon \
+			--datalake.paimon.metastore jdbc \
+			--datalake.paimon.catalog-key jdbc \
+			--datalake.paimon.uri jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc \
+			--datalake.paimon.jdbc.user dbadmin \
+			--datalake.paimon.jdbc.password dbpassword \
+			--datalake.paimon.jdbc.driver org.postgresql.Driver
