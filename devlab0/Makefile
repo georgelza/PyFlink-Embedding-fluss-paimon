@@ -8,8 +8,8 @@ Available commands:
 
 - build: 		Build required Docker images (Flink with CDC)
 
-- run:   		Start All services -> Paimon, FS Catalog
-- run-jdbc:  	Start All services -> Paimon, JDBC Catalog
+- run:   		Start All services -> Paimon table, with FS Catalog
+- run-jdbc:  	Start All services -> Paimon table, with JDBC based Catalog
 
 - deploy:		Deploy all structures
 
@@ -153,7 +153,7 @@ txns:
 
 # https://fluss.apache.org/docs/maintenance/tiered-storage/lakehouse-storage/#enable-lakehouse-storage	
 tier_fs:
-	@echo "-- Submitting Paimon Tiering Job->FS Catalog..."
+	@echo "-- Submitting Paimon Tiering Job -> FS Catalog..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
 			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \
@@ -165,7 +165,7 @@ tier_fs:
 			--datalake.paimon.metastore filesystem 
 
 tier_jdbc:
-	@echo "-- Submitting Paimon Tiering Job->JDBC Catalog..."
+	@echo "-- Submitting Paimon Tiering Job -> JDBC Catalog..."
 	docker compose exec --interactive --tty jobmanager \
 		/opt/flink/bin/flink run \
 			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \

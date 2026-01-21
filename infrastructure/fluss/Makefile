@@ -27,18 +27,13 @@ build:
 	@echo "✅ Apache Fluss Docker image built ${IMAGE_NAME}:${VERSION} successfully"
 
 
+pull: paimon s3
+
 # Required for Paimon and JDBC catalog.
-pull: paimon
-	cd stage; wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.6/postgresql-42.7.6.jar
-
 paimom:
-	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-bundle/1.3.1/paimon-bundle-1.3.1.jar \
-	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-core/1.3.1/paimon-core-1.3.1.jar \
-	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-common/1.3.1/paimon-common-1.3.1.jar 
+	cd stage; wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.6/postgresql-42.7.6.jar \
+	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-bundle/1.3.1/paimon-bundle-1.3.1.jar 
 
-S3:
-# Hadoop AWS
-	cd stage; wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
-# AWS SDK Bundle
-	cd stage; wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
-	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-s3/1.3.1/paimon-s3-1.3.1.jar
+# Required for Paimon Lakehouse to S3
+s3:
+ 	cd stage; wget https://repo1.maven.org/maven2/org/apache/paimon/paimon-s3/1.3.1/paimon-s3-1.3.1.jar 

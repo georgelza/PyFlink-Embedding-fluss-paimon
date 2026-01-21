@@ -144,11 +144,15 @@ tier:
 			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
 			--fluss.bootstrap.servers coordinator-server:9123 \
 			--datalake.format paimon \
-			--datalake.paimon.warehouse /tmp/paimon \
 			--datalake.paimon.type paimon \
 			--datalake.paimon.metastore jdbc \
 			--datalake.paimon.catalog-key jdbc \
 			--datalake.paimon.uri jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc \
 			--datalake.paimon.jdbc.user dbadmin \
 			--datalake.paimon.jdbc.password dbpassword \
-			--datalake.paimon.jdbc.driver org.postgresql.Driver
+			--datalake.paimon.jdbc.driver org.postgresql.Driver \
+          	--datalake.paimon.warehouse s3://${MINIO_BUCKET}/paimon \
+			--datalake.paimon.s3.endpoint http://minio:9000 \
+			--datalake.paimon.s3.access-key mnadmin \
+			--datalake.paimon.s3.secret-key mnpassword \
+			--datalake.paimon.s3.path.style.access true

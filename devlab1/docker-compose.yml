@@ -46,8 +46,6 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
 
-      - ./data/paimon:/tmp/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
@@ -86,8 +84,6 @@ services:
       - ./creFlinkFlows:/creFlinkFlows
       - ./pyflink:/pyflink
       
-      - ./data/paimon:/tmp/paimon
-
       - ./data/flink/logs:/opt/flink/log
       - ./data/flink/checkpoints:/opt/flink/checkpoints
       - ./data/flink/rocksdb:/opt/flink/rocksdb
@@ -173,7 +169,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-
+      zookeeper:
+        condition: service_started        
     environment:
       - |
         FLUSS_PROPERTIES=
@@ -183,12 +180,11 @@ services:
           internal.listener.name                        : INTERNAL
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/cs/remote-storage
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          #datalake.paimon.warehouse                     : /tmp/paimon
           datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
           datalake.paimon.table-default.file.format     : parquet
 
@@ -200,13 +196,12 @@ services:
           datalake.paimon.jdbc.user                     : dbadmin
           datalake.paimon.jdbc.password                 : dbpassword
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
+          
+          datalake.paimon.s3.endpoint                   : http://minio:9000
+          datalake.paimon.s3.access-key                 : mnadmin
+          datalake.paimon.s3.secret-key                 : mnpassword
+          datalake.paimon.s3.path.style.access          : true
 
-          # S3 Storage
-          s3.endpoint                                   : http://minio:9000
-          s3.access-key                                 : mnadmin
-          s3.secret-key                                 : mnpassword
-          s3.region                                     : af-south-1
-          s3.path.style.access                          : true
 
     ports:
       - "9123:9123"
@@ -218,7 +213,6 @@ services:
       # they all need to be configured under /tmp. 
       - ./data/fluss/cs/local-data:/tmp/local-data
       - ./data/fluss/cs/remote-data:/tmp/remote-data
-      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9123/health || exit 1"]
       interval: 15s
@@ -247,12 +241,11 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts1/remote-storage
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          #datalake.paimon.warehouse                     : /tmp/paimon
           datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
           datalake.paimon.table-default.file.format     : parquet
 
@@ -265,20 +258,16 @@ services:
           datalake.paimon.jdbc.password                 : dbpassword
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
-          # S3 Storage
-          s3.endpoint                                   : http://minio:9000
-          s3.access-key                                 : mnadmin
-          s3.secret-key                                 : mnpassword
-          s3.region                                     : af-south-1
-          s3.path.style.access                          : true
-
+          datalake.paimon.s3.endpoint                   : http://minio:9000
+          datalake.paimon.s3.access-key                 : mnadmin
+          datalake.paimon.s3.secret-key                 : mnpassword
+          datalake.paimon.s3.path.style.access          : true
 
     ports:
       - "9124:9124"
     volumes:
       - ./data/fluss/ts1/local-data:/tmp/local-data
       - ./data/fluss/ts1/remote-data:/tmp/remote-data
-      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -307,12 +296,11 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts2/remote-storage
+          remote.data.dir                               : /tmp/remote-data
 
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          #datalake.paimon.warehouse                     : /tmp/paimon
           datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
           datalake.paimon.table-default.file.format     : parquet
 
@@ -325,19 +313,17 @@ services:
           datalake.paimon.jdbc.password                 : dbpassword
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
 
-          # S3 Storage
-          s3.endpoint                                   : http://minio:9000
-          s3.access-key                                 : mnadmin
-          s3.secret-key                                 : mnpassword
-          s3.region                                     : af-south-1
-          s3.path.style.access                          : true
+          datalake.paimon.s3.endpoint                   : http://minio:9000
+          datalake.paimon.s3.access-key                 : mnadmin
+          datalake.paimon.s3.secret-key                 : mnpassword
+          datalake.paimon.s3.path.style.access          : true
+
 
     ports:
       - "9125:9124"
     volumes:
       - ./data/fluss/ts2/local-data:/tmp/local-data
       - ./data/fluss/ts2/remote-data:/tmp/remote-data
-      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -366,12 +352,11 @@ services:
           kv.snapshot.interval                          : 0s
 
           data.dir                                      : /tmp/local-data
-          remote.data.dir                               : s3://${MINIO_BUCKET}/paimon/ts3/remote-storage
+          remote.data.dir                               : /tmp/remote-data
           
           # Lakehouse store and catalog both on FS
           datalake.enabled                              : true
           datalake.format                               : paimon
-          #datalake.paimon.warehouse                     : /tmp/paimon
           datalake.paimon.warehouse                     : s3://${MINIO_BUCKET}/paimon
           datalake.paimon.table-default.file.format     : parquet
 
@@ -383,21 +368,17 @@ services:
           datalake.paimon.jdbc.user                     : dbadmin
           datalake.paimon.jdbc.password                 : dbpassword
           datalake.paimon.jdbc.driver                   : org.postgresql.Driver
-
-           # S3 Storage
-          s3.endpoint                                   : http://minio:9000
-          s3.access-key                                 : mnadmin
-          s3.secret-key                                 : mnpassword
-          s3.region                                     : af-south-1
-          s3.path.style.access                          : true
-
+          
+          datalake.paimon.s3.endpoint                   : http://minio:9000
+          datalake.paimon.s3.access-key                 : mnadmin
+          datalake.paimon.s3.secret-key                 : mnpassword
+          datalake.paimon.s3.path.style.access          : true
 
     ports:
       - "9126:9124"
     volumes:
       - ./data/fluss/ts3/local-data:/tmp/local-data
       - ./data/fluss/ts3/remote-data:/tmp/remote-data
-      - ./data/paimon:/tmp/paimon
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9124/health || exit 1"]
       interval: 15s
@@ -414,6 +395,7 @@ services:
       - "2181:2181"
     environment:
       ZOO_MY_ID: 1
+
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
     volumes:
       - ./data/zk/data:/data
@@ -424,7 +406,7 @@ services:
       timeout: 5s
       retries: 5
 
-################################################################################
+  ################################################################################
   # MinIO Object Storage - S3 Compatible Storage
   ################################################################################  
   minio:
@@ -480,15 +462,15 @@ services:
 
       mc rm -r --force ${MINIO_ALIAS}/${MINIO_BUCKET};  
 
-      mc mb ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon --ignore-existing;
+      mc mb minio/warehouse --ignore-existing;
 
-      mc policy set public ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon;
+      mc policy set public minio/warehouse;
 
-      mc anonymous set public ${MINIO_ALIAS}/${MINIO_BUCKET}/paimon;
+      mc anonymous set public minio/warehouse;
 
-      mc ls ${MINIO_ALIAS};
+      mc ls minio;
 
-      echo "MinIO bucket '${MINIO_ALIAS}/${MINIO_BUCKET}' created successfully";
+      echo "MinIO bucket 'minio/warehouse' created successfully";
       tail -f /dev/null
       "
 

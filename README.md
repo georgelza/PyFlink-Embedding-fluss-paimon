@@ -1,42 +1,58 @@
-## Using Pyflink UDF to calculate embedding vectors on inbound tables via Flink CDC
+## An Pratical Example "How to" Source data from a Postgres, Push it into Apache Fluss with Paimon based Lakehouse tier'd onto S3.
+
+### Blog Overview
+
+Let's write a fully workable demo with all the required docker-compose code, Dockerfiles listing all required Jar's and Flink SQL showing how to create data, CDC consume it from PostgreSQL, push via Apache Flink into Apache Fluss (Incubating) and Lakehouse tier it down into Apache Paimon hosted on FileSystem and S3 based Object, while utilising an JDBC based metastore/catalog, itself persisted into PostgreSQL.
 
 
-Blog Overview / PLAN
+### Our data flow:
 
-Write workable demo's with the required docker-compose and Dockerfiles and all required builds and Flink SQL showing
+1. Use [ShadowTraffic](https://shadowtraffic.io) to create 2 data products which we insert into PostgreSQL, (2 Tables, accountHolder and transactions).
+   
+2. Use Apahce Flink CDC to consume our inbound data into PostgreSQL exposing it in Apache Flink as Tables.
 
-1. ShadowTraffic -> PostgreSQL  (2 Tables, accountHolder and transactions), at this stage we excluding the Array[Float column] as computed by the included PyFlink embedding UDF.
+3. Select from our Apache Flink tables, inserting into Apache Fluss Tables.
 
-2. PostgreSQL -> CDC -> Flink
+4. Enable Lakehouse tiering... 
 
-3. Flink ->Fluss
+Here we have 2 examples, 
 
-4. Enable Lakehouse
-   1. Fluss -> Paimon on FS with FS catalog
-   2. Fluss -> Paimon on FS with JDBC catalog
-   3. Fluss -> Paimon on MinIO/S3 with JDBC catalog
+   1. devlab0
 
-All Filesystem (1 & 2) based options will be located in the `devlab0` subdirectory structure.
+      1. Configure Apache Fluss tiering into Apache Paimon based table as our Lakehouse tier, configured onto File system with a File system based catalog
+
+      2. Configure Apache Fluss tiering into Apache Paimon based table as our Lakehouse tier, configured onto File system with JDBC based catalog
+
+   2. devlab1
+
+      1. Configure Apache Fluss tiering into Apache Paimon based table as our Lakehouse tier, configured onto MinIO/S3 Object stoore with an JDBC based catalog.
+
+
+
+All Filesystem based options (Example 1 & 2) can be found in the `devlab0` subdirectory structure.
 
 **NOTES:** For using local File System during testing as lakehouse storage, Dual mount your ./tmp/paimon in container to say ./data/paimon: locally, This needs to be done in BOTH the Flink containers (Jobmanager, TaskManager) and the Fluss Incubating containers (coordinator-server and tablet-servers).
 
 
-All MinIO/S3 (3) based options will be located in the `devlab1` subdirectory structure.
+All MinIO/S3 (3) based options (Example 3) can befound in the `devlab1` subdirectory structure.
 
 
-So, the original idea, generate data, do embedding using Pyflink, store into a lakehouse, simple.
+So the previous Blog included calculating embeddings (using an PyFlink based UDF, See: `<Project root/devlab#/pyflink/udfs/`) and pushing that directly into our Apache Paimon datastore.
 
-Well mission accomplished, even if we did changed some of the original outputs, will see if i can circle back on the next demo/blog... ye, there is another one already drawn out, started.
+At this time Apache Fluss does not support Array of Float or Array of Double as column type so for this blog we're excluding that as part of our Select / insert stagement. This will however be very easy to add once it is supported in an up coming Apache Fluss release.
 
-Our little project, create accountHolder records (that defines a person, family at an address) and then financial transactions (well who can life without spending money) modeled as a outbound and inbound event, very real world.
+
+Well mission accomplished.
+
+Re our 2 Data products, 
+
+We create accountHolder records (that defines a person, family at an address) and then financial transactions (well who can life without spending money) modeled as a outbound and inbound event, very real world.
 
 These are all inserted into a PostgreSQL database/tables.
 
-We then utilize Apache Flink CDC to consume these into trancient tables inside Apache Flink (we're using Generic in memory catalog).
+We then utilize as per above Apache Flink CDC to consume these into trancient tables inside Apache Flink (we're using Generic in memory based catalog).
 
-Next up, we need to do the embedding calculation, this is done using two Pyflink User Defined functions (UDF), (See: `<Project root/devlab#/pyflink/udfs/`).
-
-These are called as per below, as inline function calls, returning the embedding vector that is inserted into our lakehouse, based on Apache Paimon.
+From here we use the below `Insert into <Table> (<columns>) select <columns> from Y;` statement to push our data into our Apache Fluss (Incubating) table.
 
 ```sql
 Insert into fluss_catalog.finflow.<target table>
@@ -56,30 +72,82 @@ select (
 from c_cdcsource.demog.<source table>;~
 ```
 
-**FOR NOW THE ABOVE:
-**    
-    GENERATE_<>_EMBEDDING(
-        fields
-        ...
-    )
-is not part of the Select statment and insert statement as Apache Fluss () cannot accept array[Float] or array[double]
+While all of this sounds simply, it was/is a find dance to make sure all the required JAR files are include in our Apache Flink and Apache Fluss (incubating) containers, and all the relevant properties are set for our various services in our Docker-compose configuration. The last bit being the required values for our Apache Flink tiering job.
 
 
-**Previous blog** As background context.
+The Blog would not have "eventually" worked without the information in the work done in [Hands on Fluss Lakehouse](https://fluss.apache.org/blog/hands-on-fluss-lakehouse/) post.
+
+
+### NOTES: 
+
+Below is our Apache Fluss (Incubating) Dockerfile - JAR's
+
+```bash
+# Dockerfile
+# 1. Paimon / JDBC catalog
+RUN mkdir -p /opt/fluss/plugins/paimon
+COPY stage/postgresql-42.7.6.jar            ${FLUSS_HOME}/plugins/paimon
+COPY stage/paimon-bundle-1.3.1.jar          ${FLUSS_HOME}/plugins/paimon
+
+# 2. Needed for S3 storage tier
+COPY stage/paimon-s3-1.3.1.jar              ${FLUSS_HOME}/plugins/paimon
+
+# 3. Needed for S3 storage tier
+RUN mv ${FLUSS_HOME}/plugins/s3/fluss-fs-s3-0.8.0-incubating.jar  ${FLUSS_HOME}/lib
+RUN rm -rf ${FLUSS_HOME}/plugins/s3
+
+# 3. Lets make sure with our copying of JARs that all is owned by the right user/group.
+RUN chown -R fluss:fluss ${FLUSS_HOME}
+```
+
+The next one is our Apache Flink Dockerfile - JAR's
+
+```bash
+
+```
+
+Once we have these 2 containers build we can run the 2 labs, as contained in devlab0 and devlab1.
+The biggest difference now being the coordinator and tablet-server configurations as per the docker-compose-*.yaml files in devlab0 and devlab1.
+
+Lastly is the configuration of our Apache Flink tiering job. see devlab#/Makefile for these, at the end of the file... ;)
+
+Below is a consolidaation of the information we have in our various Apache Fluss docker-compose service definitions, as required by the tier job to move our data from the Apache Fluss table into our Lakehouse based tier based on Apache Paimon with storage on S3 with for our JDBC based catalog.
+
+```yaml
+# Makefile
+tier:
+	@echo "-- Submitting Paimon Tiering Job->JDBC Catalog..."
+	docker compose exec --interactive --tty jobmanager \
+		/opt/flink/bin/flink run \
+			-Dpipeline.name="My Fluss Tiering Service, output to Paimon" \
+			-Dparallelism.default=2 \
+			/opt/flink/lib/fluss-flink-tiering-0.8.0-incubating.jar \
+			--fluss.bootstrap.servers coordinator-server:9123 \
+			--datalake.format paimon \                                  # What format do we want the Lakehouse table to be in
+			--datalake.paimon.type paimon \
+			--datalake.paimon.metastore jdbc \                          # What catalog are we going to be using
+			--datalake.paimon.catalog-key jdbc \
+			--datalake.paimon.uri jdbc:postgresql://postgrescat:5432/catalogs?currentSchema=paimon_jdbc \       # PostgreSQL Catalog URI
+			--datalake.paimon.jdbc.user dbadmin \                                                               # PostgreSQL username
+			--datalake.paimon.jdbc.password dbpassword \                                                        # PostgreSQL password
+			--datalake.paimon.jdbc.driver org.postgresql.Driver \
+          	--datalake.paimon.warehouse s3://warehouse/paimon \                                                 # MinIO/S3 warehouse location
+			--datalake.paimon.s3.endpoint http://minio:9000 \                                                   # MinIO/S3 server endpoint
+			--datalake.paimon.s3.access-key mnadmin \                                                           # MinIO credentials
+			--datalake.paimon.s3.secret-key mnpassword \
+			--datalake.paimon.s3.path.style.access true                                                         # Usee MinIO path structure
+```
+
+
+**Previous Blog** As background context.
 
 BLOG: [Using Pyflink UDF to calculate embedding vectors on inbound tables via Flink CDC](https://medium.com/@georgelza/using-pyflink-udf-to-calculate-embedding-vectors-on-inbound-tables-via-flink-f77ce605a429)
 
 GIT REPO: [PyFlink_Embedder](https://github.com/georgelza/PyFlink_Embedder.git)
 
 
-## Overview
-
-The stack allows for the Lakehouse tables to either be created on S3 Object storage hosted on MinIO container or on the local file system `<Project root/devlab/data/flink/paimon/`.
-
-
 
 ## Deployment
-
 
 
 **NOTE:** For the above deploy I ran into an interesting situation. As you will notice the `PostgreSQL` source table is created in the `c_cdcsource` catalog. Now that catalog is of type `generic in memory` as per **Apache Flink**. So whats so special about that, well, it’s session scoped, **ONLY**. This means whatever you create in the catalog is only available/visible for that session, during that session. 
@@ -88,22 +156,22 @@ Ok. Now this means when we create the catalog, the source `PostgreSQL` reference
 
 Code duplication is also note a great idea, we want to re-use these bits.
 
-So at this point, I’m going to say, look at our `Makefile`, at the deploy: and deploy-fs: sections, and how they call `master:` or `master-fs:`, and how we use the “>” operator to build a `master.sql` or `master-fs.sql` script, which we then execute in `deploy:` or `deploy-fs:`. 
+So at this point, I’m going to say, look at our `Makefile`, at the deploy: and deploy-fs: sections, and how they call `master:`, and how we use the “>” operator to build a `master.sql` script, which we then execute in `deploy:` Makefile command. 
 
 There is still room for improvement here, but for now this worked.
 
 
-
-
-
 - Generate data,
 
-  - Execute our `Shadowtraffic` based data generator to create our data products for #1 AccountHolders, #2 Financial Transactions tables.
+  - Execute our `Shadowtraffic` based data generator to create our data products for:
+    
+    #1 AccountHolders, 
+    
+    #2 Financial Transactions tables.
+    
     This will Ooutput into two PostgreSQL Tables provided by our `postgrescdc` docker-compose service.
     The data generation is run by executing `<Project Root>/shadowtraffic/run_pg1.sh`.
     If you want to increase the data generate rate execute `<Project Root>/shadowtraffic/run_pg2.sh`.
-
-
 
 
 ## Regarding our Stack
@@ -116,7 +184,7 @@ The following stack is deployed using one of the provided  `<Project Root>/devla
 
 - [Apache Paimon 1.3.1.](https://paimon.apache.org)
 
-- [PostgreSQL 12](https://www.postgresql.org)
+- [PostgreSQL 15](https://www.postgresql.org)
 
 - [MinIO](https://www.min.io) - Project has gone into Maintenance mode... 
 
@@ -136,6 +204,11 @@ Thanks for following. Till next time.
 <img src="blog-doc/diagrams/rabbithole.jpg" alt="Our Build" width="600">
 
 And like that we’re done with our little trip down another Rabbit Hole.
+
+## CREDITS
+
+This blog would not have been possible without the assistance of [Yuxia Luo](https://www.linkedin.com/in/yuxia-luo-32720336a/) from the Fluss community/Project. He countless times assisted when I got stuck with these nasty JAR' Jar Jar conflicts/configuration, not sure what we want to call it...
+
 
 ## ABOUT ME
 
